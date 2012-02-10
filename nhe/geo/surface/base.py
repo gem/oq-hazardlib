@@ -47,3 +47,18 @@ class BaseSurface(object):
             A list of lists of points. First list representing the first
             "row" of points (the top edge) and so on.
         """
+
+    @abc.abstractmethod
+    def get_strike(self, upper_left_corner,
+            upper_right_corner, bottom_left_corner):
+        """TODO"""
+
+    @abc.abstractmethod
+    def get_dip(self, upper_left_corner,
+            upper_right_corner, bottom_left_corner):
+        """TODO"""
+
+    @abc.abstractmethod
+    def get_centroid(self, upper_left_corner,
+            upper_right_corner, bottom_left_corner):
+        """TODO"""
