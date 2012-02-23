@@ -6,6 +6,7 @@ from nhe.geo.surface.planar import PlanarSurface
 from nhe.geo.mesh import RectangularMesh
 
 from tests.geo.surface import _planar_test_data as test_data
+from tests.geo.surface import _utils as utils
 
 
 class PlanarSurfaceCreationTestCase(unittest.TestCase):
@@ -114,77 +115,64 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
         )
 
 
-class PlanarSurfaceGetMeshTestCase(unittest.TestCase):
-    def _test(self, corner_points, mesh_spacing, expected_mesh):
-        strike = 0
-        dip = 90
-        surface = PlanarSurface(mesh_spacing, strike, dip, *corner_points)
-        mesh = surface.get_mesh()
-        self.assertIs(mesh, surface.get_mesh())
-        expected_mesh = list(itertools.chain(*expected_mesh))
-        self.assertEqual(len(mesh), len(expected_mesh))
-        self.assertIsInstance(mesh, RectangularMesh)
-        for i, point in enumerate(mesh):
-            expected_point = Point(*expected_mesh[i])
-            distance = expected_point.distance(point) * 1e3
-            self.assertAlmostEqual(
-                0, distance, delta=2,  # allow discrepancy of 2 meters
-                msg='point %d is off: %s != %s (distance is %.3fm)'
-                    % (i, point, expected_point, distance)
-            )
+class PlanarSurfaceGetMeshTestCase(utils.SurfaceTestCase):
+
+    def _surface(self, corners):
+        return PlanarSurface(1.0, 0.0, 90.0, *corners)
 
     def test_2(self):
-        self._test(test_data.TEST_2_CORNERS, mesh_spacing=1,
-                   expected_mesh=test_data.TEST_2_MESH)
+        self.assert_mesh_is(self._surface(test_data.TEST_2_CORNERS),
+                expected_mesh=test_data.TEST_2_MESH)
 
     def test_3(self):
-        self._test(test_data.TEST_3_CORNERS, mesh_spacing=1,
-                   expected_mesh=test_data.TEST_3_MESH)
+        self.assert_mesh_is(self._surface(test_data.TEST_3_CORNERS),
+                expected_mesh=test_data.TEST_3_MESH)
 
     def test_4(self):
-        self._test(test_data.TEST_4_CORNERS, mesh_spacing=1,
-                   expected_mesh=test_data.TEST_4_MESH)
+        self.assert_mesh_is(self._surface(test_data.TEST_4_CORNERS),
+                expected_mesh=test_data.TEST_4_MESH)
 
     def test_5(self):
-        self._test(test_data.TEST_5_CORNERS, mesh_spacing=1,
-                   expected_mesh=test_data.TEST_5_MESH)
+        self.assert_mesh_is(self._surface(test_data.TEST_5_CORNERS),
+                expected_mesh=test_data.TEST_5_MESH)
 
     def test_6(self):
         corners = [Point(0, 0, 9)] * 4
         mesh = [[(0, 0, 9)]]
-        self._test(corners, mesh_spacing=1, expected_mesh=mesh)
+        self.assert_mesh_is(self._surface(corners),
+                expected_mesh=mesh)
 
     def test_7_rupture_1(self):
-        self._test(test_data.TEST_7_RUPTURE_1_CORNERS, mesh_spacing=1,
-                   expected_mesh=test_data.TEST_7_RUPTURE_1_MESH)
+        self.assert_mesh_is(self._surface(test_data.TEST_7_RUPTURE_1_CORNERS),
+                expected_mesh=test_data.TEST_7_RUPTURE_1_MESH)
 
     def test_7_rupture_2(self):
-        self._test(test_data.TEST_7_RUPTURE_2_CORNERS, mesh_spacing=1,
-                   expected_mesh=test_data.TEST_7_RUPTURE_2_MESH)
+        self.assert_mesh_is(self._surface(test_data.TEST_7_RUPTURE_2_CORNERS),
+                expected_mesh=test_data.TEST_7_RUPTURE_2_MESH)
 
     def test_7_rupture_3(self):
-        self._test(test_data.TEST_7_RUPTURE_3_CORNERS, mesh_spacing=1,
-                   expected_mesh=test_data.TEST_7_RUPTURE_3_MESH)
+        self.assert_mesh_is(self._surface(test_data.TEST_7_RUPTURE_3_CORNERS),
+                expected_mesh=test_data.TEST_7_RUPTURE_3_MESH)
 
     def test_7_rupture_4(self):
-        self._test(test_data.TEST_7_RUPTURE_4_CORNERS, mesh_spacing=1,
-                   expected_mesh=test_data.TEST_7_RUPTURE_4_MESH)
+        self.assert_mesh_is(self._surface(test_data.TEST_7_RUPTURE_4_CORNERS),
+                expected_mesh=test_data.TEST_7_RUPTURE_4_MESH)
 
     def test_7_rupture_5(self):
-        self._test(test_data.TEST_7_RUPTURE_5_CORNERS, mesh_spacing=1,
-                   expected_mesh=test_data.TEST_7_RUPTURE_5_MESH)
+        self.assert_mesh_is(self._surface(test_data.TEST_7_RUPTURE_5_CORNERS),
+                expected_mesh=test_data.TEST_7_RUPTURE_5_MESH)
 
     def test_7_rupture_6(self):
-        self._test(test_data.TEST_7_RUPTURE_6_CORNERS, mesh_spacing=1,
-                   expected_mesh=test_data.TEST_7_RUPTURE_6_MESH)
+        self.assert_mesh_is(self._surface(test_data.TEST_7_RUPTURE_6_CORNERS),
+                expected_mesh=test_data.TEST_7_RUPTURE_6_MESH)
 
     def test_7_rupture_7(self):
-        self._test(test_data.TEST_7_RUPTURE_7_CORNERS, mesh_spacing=1,
-                   expected_mesh=test_data.TEST_7_RUPTURE_7_MESH)
+        self.assert_mesh_is(self._surface(test_data.TEST_7_RUPTURE_7_CORNERS),
+                expected_mesh=test_data.TEST_7_RUPTURE_7_MESH)
 
     def test_7_rupture_8(self):
-        self._test(test_data.TEST_7_RUPTURE_8_CORNERS, mesh_spacing=1,
-                   expected_mesh=test_data.TEST_7_RUPTURE_8_MESH)
+        self.assert_mesh_is(self._surface(test_data.TEST_7_RUPTURE_8_CORNERS),
+                expected_mesh=test_data.TEST_7_RUPTURE_8_MESH)
 
 
 class PlanarSurfaceGetMinDistanceTestCase(unittest.TestCase):

@@ -2,8 +2,9 @@
 Module :mod:`nhe.geo.point` defines :class:`Point`.
 """
 import math
+import numpy
 
-from nhe.geo._utils import GEOD
+from nhe.geo._utils import GEOD, EARTH_RADIUS, ensure
 
 
 class Point(object):
@@ -30,11 +31,15 @@ class Point(object):
     EQUALITY_DISTANCE = 1e-3
 
     def __init__(self, longitude, latitude, depth=0.0):
-        if longitude < -180.0 or longitude > 180.0:
-            raise ValueError("Longitude %.6f outside range!" % longitude)
+        
+        ensure(depth < EARTH_RADIUS,
+                "The depth must be < than the earth radius (6371.0 km)!")
+        
+        ensure(-180.0 <= longitude <= 180.0,
+                "Longitude %.6f outside range!" % longitude)
 
-        if latitude < -90.0 or latitude > 90.0:
-            raise ValueError("Latitude %.6f outside range!" % latitude)
+        ensure(-90.0 <= latitude <= 90.0,
+                "Latitude %.6f outside range!" % latitude)
 
         self.depth = depth
         self.latitude = latitude
@@ -167,6 +172,40 @@ class Point(object):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def on_surface(self):
+        """
+        Check if this point is defined on the surface (depth is 0.0).
+
+        :returns:
+            True if this point is on the surface, false otherwise.
+        :rtype:
+            boolean
+        """
+
+        return self.depth == 0.0
+
+    def position_vector(self):
+        """
+        Return the position vector (in cartesian coordinates) of this point.
+
+        For the equation see: 
+            http://mathworld.wolfram.com/SphericalCoordinates.html.
+
+        :returns:
+            The position vector.
+        :rtype:
+            ``numpy.array`` containing the cartesian coordinates (x, y, z)
+        """
+
+        theta = math.radians(self.longitude)
+        phi = math.radians(90.0 - self.latitude)
+
+        x = (EARTH_RADIUS - self.depth) * math.cos(theta) * math.sin(phi)
+        y = (EARTH_RADIUS - self.depth) * math.sin(theta) * math.sin(phi)
+        z = (EARTH_RADIUS - self.depth) * math.cos(phi)
+
+        return numpy.array([x, y, z])
 
     def equally_spaced_points(self, point, distance):
         """
