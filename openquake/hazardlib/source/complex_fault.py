@@ -44,6 +44,8 @@ class ComplexFaultSource(SeismicSource):
         If :meth:`~openquake.hazardlib.geo.surface.complex_fault.ComplexFaultSurface.check_fault_data`
         fails or if rake value is invalid.
     """
+    type = 'complexFaultSource'
+
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
                  magnitude_scaling_relationship, rupture_aspect_ratio,

@@ -56,6 +56,8 @@ class PointSource(SeismicSource):
         depth,  if one or more of hypocenter depth values is shallower
         than upper seismogenic depth or deeper than lower seismogenic depth.
     """
+    type = 'pointSource'
+
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
                  magnitude_scaling_relationship, rupture_aspect_ratio,
