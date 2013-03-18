@@ -76,6 +76,7 @@ class YoungsCoppersmith1985MFD(BaseMFD):
     """
 
     MODIFICATIONS = set()
+    type = 'YoungsCoppersmith1985MFD'
 
     def __init__(self, min_mag, a_val, b_val, char_mag, char_rate, bin_width):
         self.min_mag = min_mag

@@ -49,6 +49,8 @@ class CharacteristicFaultSource(SeismicSource):
     magnitude scaling relationship, and aspect ratio, therefore the constructor
     set these parameters to ``None``.
     """
+    type = 'characteristicFaultSource'
+
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, surface, rake):
         super(CharacteristicFaultSource, self).__init__(

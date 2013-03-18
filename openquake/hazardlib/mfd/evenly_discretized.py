@@ -35,6 +35,7 @@ class EvenlyDiscretizedMFD(BaseMFD):
         as this list length.
     """
     MODIFICATIONS = set()
+    type = 'EvenlyDiscretizedMFD'
 
     def __init__(self, min_mag, bin_width, occurrence_rates):
         self.min_mag = min_mag

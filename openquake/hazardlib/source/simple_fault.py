@@ -51,6 +51,8 @@ class SimpleFaultSource(SeismicSource):
         fails, if rake value is invalid and if rupture mesh spacing is too high
         for the lowest magnitude value.
     """
+    type = 'simpleFaultSource'
+
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
                  magnitude_scaling_relationship, rupture_aspect_ratio,

@@ -62,6 +62,7 @@ class TruncatedGRMFD(BaseMFD):
                          'set_max_mag',
                          'increment_b',
                          'set_ab'))
+    type = 'TruncatedGRMFD'
 
     def __init__(self, min_mag, max_mag, bin_width, a_val, b_val):
         self.min_mag = min_mag
