@@ -87,6 +87,8 @@ class YoungsCoppersmith1985MFD(BaseMFD):
 
         self.check_constraints()
 
+        self.type = 'YoungsCoppersmith1985MFD'
+
     def check_constraints(self):
         """
         Checks the following constraints:

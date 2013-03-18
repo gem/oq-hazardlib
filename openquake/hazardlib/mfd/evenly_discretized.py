@@ -43,6 +43,8 @@ class EvenlyDiscretizedMFD(BaseMFD):
 
         self.check_constraints()
 
+        self.type = 'EvenlyDiscretizedMFD'
+
     def check_constraints(self):
         """
         Checks the following constraints:
