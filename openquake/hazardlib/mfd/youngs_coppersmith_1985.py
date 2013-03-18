@@ -76,6 +76,7 @@ class YoungsCoppersmith1985MFD(BaseMFD):
     """
 
     MODIFICATIONS = set()
+    type = 'YoungsCoppersmith1985MFD'
 
     def __init__(self, min_mag, a_val, b_val, char_mag, char_rate, bin_width):
         self.min_mag = min_mag
@@ -86,8 +87,6 @@ class YoungsCoppersmith1985MFD(BaseMFD):
         self.bin_width = bin_width
 
         self.check_constraints()
-
-        self.type = 'YoungsCoppersmith1985MFD'
 
     def check_constraints(self):
         """
