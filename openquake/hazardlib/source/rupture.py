@@ -38,17 +38,18 @@ class Rupture(object):
         An instance of subclass of
         :class:`~openquake.hazardlib.geo.surface.base.BaseSurface`.
         Object representing the rupture surface geometry.
-    :param source_typology:
-        Subclass of :class:`~openquake.hazardlib.source.base.SeismicSource`
-        (class object, not an instance) referencing the typology
-        of the source that produced this rupture.
+    :param source:
+        Instance of :class:`~openquake.hazardlib.source.base.SeismicSource`
+        referencing the source that produced this rupture.
 
     :raises ValueError:
         If magnitude value is not positive, hypocenter is above the earth
         surface or tectonic region type is unknown.
     """
+    tag = None  # this is intended to be overridden by client code
+
     def __init__(self, mag, rake, tectonic_region_type, hypocenter,
-                 surface, source_typology):
+                 surface, source):
         if not mag > 0:
             raise ValueError('magnitude must be positive')
         if not hypocenter.depth > 0:
@@ -59,7 +60,11 @@ class Rupture(object):
         self.mag = mag
         self.hypocenter = hypocenter
         self.surface = surface
-        self.source_typology = source_typology
+        self.source = source
+
+    @property
+    def source_typology(self):
+        return type(self.source)
 
 
 class ProbabilisticRupture(Rupture):
@@ -77,14 +82,11 @@ class ProbabilisticRupture(Rupture):
         If occurrence rate is not positive.
     """
     def __init__(self, mag, rake, tectonic_region_type, hypocenter, surface,
-                 source_typology,
-                 occurrence_rate, temporal_occurrence_model):
+                 source, occurrence_rate, temporal_occurrence_model):
         if not occurrence_rate > 0:
             raise ValueError('occurrence rate must be positive')
         super(ProbabilisticRupture, self).__init__(
-            mag, rake, tectonic_region_type, hypocenter, surface,
-            source_typology
-        )
+            mag, rake, tectonic_region_type, hypocenter, surface, source)
         self.temporal_occurrence_model = temporal_occurrence_model
         self.occurrence_rate = occurrence_rate
 

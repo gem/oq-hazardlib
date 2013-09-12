@@ -124,8 +124,7 @@ class ComplexFaultSource(SeismicSource):
                         self.source_id, str(e)))
                 yield ProbabilisticRupture(
                     mag, self.rake, self.tectonic_region_type, hypocenter,
-                    surface, type(self),
-                    occurrence_rate, temporal_occurrence_model
+                    surface, self, occurrence_rate, temporal_occurrence_model
                 )
 
 

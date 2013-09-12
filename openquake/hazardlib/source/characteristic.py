@@ -103,6 +103,6 @@ class CharacteristicFaultSource(SeismicSource):
         for (mag, occurrence_rate) in self.get_annual_occurrence_rates():
             yield ProbabilisticRupture(
                 mag, self.rake, self.tectonic_region_type, hypocenter,
-                self.surface, type(self), occurrence_rate,
+                self.surface, self, occurrence_rate,
                 temporal_occurrence_model
             )

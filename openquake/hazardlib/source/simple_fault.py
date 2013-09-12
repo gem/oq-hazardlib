@@ -147,8 +147,8 @@ class SimpleFaultSource(SeismicSource):
                     surface = SimpleFaultSurface(mesh)
                     yield ProbabilisticRupture(
                         mag, self.rake, self.tectonic_region_type, hypocenter,
-                        surface, type(self),
-                        occurrence_rate, temporal_occurrence_model
+                        surface, self, occurrence_rate,
+                        temporal_occurrence_model
                     )
 
     def _get_rupture_dimensions(self, fault_length, fault_width, mag):

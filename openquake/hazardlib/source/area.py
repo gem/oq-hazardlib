@@ -125,7 +125,7 @@ class AreaSource(PointSource):
                 hypocenter.depth = hc_depth
                 rupture = ProbabilisticRupture(
                     mag, rake, self.tectonic_region_type, hypocenter,
-                    surface, type(self), occ_rate, temporal_occurrence_model
+                    surface, self, occ_rate, temporal_occurrence_model
                 )
                 yield rupture
 

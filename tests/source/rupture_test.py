@@ -34,7 +34,7 @@ def make_rupture(rupture_class, **kwargs):
             Point(0, 0, 1), Point(1, 0, 1),
             Point(1, 0, 2), Point(0, 0, 2)
         ),
-        'source_typology': object()
+        'source': object()
     }
     default_arguments.update(kwargs)
     kwargs = default_arguments
