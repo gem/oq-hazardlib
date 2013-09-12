@@ -61,6 +61,8 @@ class Rupture(object):
         self.hypocenter = hypocenter
         self.surface = surface
         self.source = source
+        # TODO1: (MS) having the source, can we avoid to store the surface?
+        # TODO2: (MS) should we pickle only the source_id to save disk space?
 
     @property
     def source_typology(self):
