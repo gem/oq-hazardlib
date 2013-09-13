@@ -67,10 +67,10 @@ class PointSourceCreationTestCase(unittest.TestCase):
         self.assertEqual(ae.exception.message, msg)
 
     def test_negative_upper_seismogenic_depth(self):
-        self.assert_failed_creation(ValueError,
+        self.assert_failed_creation(
+            ValueError,
             'upper seismogenic depth must be non-negative',
-            upper_seismogenic_depth=-0.1
-        )
+            upper_seismogenic_depth=-0.1)
 
     def test_non_positive_rupture_mesh_spacing(self):
         msg = 'rupture mesh spacing must be positive'
@@ -512,9 +512,9 @@ class PointSourceSourceFilterTestCase(unittest.TestCase):
             nodal_plane_distribution=PMF([
                 (0.5, NodalPlane(strike=1, dip=2, rake=3)),
                 (0.5, NodalPlane(strike=1, dip=20, rake=3)),
-            ]),
-            location=Point(2.0, 0.0),
-        )
+                ]),
+            location=Point(2.0, 0.0))
+
         self.source2 = make_point_source(
             mfd=EvenlyDiscretizedMFD(min_mag=6.5, bin_width=1,
                                      occurrence_rates=[1]),
@@ -597,7 +597,7 @@ class PointSourceRuptureFilterTestCase(unittest.TestCase):
         rupture = ProbabilisticRupture(
             mag=1, rake=2, tectonic_region_type=TRT.VOLCANIC,
             hypocenter=self.hypocenter, surface=surface,
-            source_typology=PointSource, occurrence_rate=3,
+            source=object.__new__(PointSource), occurrence_rate=3,
             temporal_occurrence_model=PoissonTOM(1)
         )
         return rupture

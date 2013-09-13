@@ -58,9 +58,11 @@ class RuptureSiteDistanceFilterTestCase(unittest.TestCase):
             def __init__(self, integration_distance, sites_mapping):
                 self.integration_distance = integration_distance
                 self.sites_mapping = sites_mapping
+
             @property
             def source_typology(self):
                 return self
+
             def filter_sites_by_distance_to_rupture(self, rupture,
                                                     integration_distance,
                                                     sites):
