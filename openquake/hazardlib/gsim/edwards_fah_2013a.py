@@ -24,10 +24,12 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGV, PGA, SA
 
+
 class EdwardsFah2013Alpine60MPa(GMPE):
+
     """
-    This function implements the GMPE developed by Ben Edwars and Donath Fah and published 
-    as "A Stochastic Ground-Motion Model for Switzerland" Bulletin of the 
+    This function implements the GMPE developed by Ben Edwars and Donath Fah and published
+    as "A Stochastic Ground-Motion Model for Switzerland" Bulletin of the
     Seismological Society of America, Vol. 103, No. 1, pp. 78–98, February 2013.
     The GMPE was parametrized by Carlo Cauzzi to be implemented in OpenQuake.
     This class implements the equations for 'Alpine' and 'Foreland - two
@@ -35,8 +37,8 @@ class EdwardsFah2013Alpine60MPa(GMPE):
     therefore this GMPE is region specific".
     @ implemented by laurentiu.danciu@sed.ethz.zh
     """
-    #: Supported tectonic region type is ALPINE which 
-    #: is a sub-region of Active Shallow Crust. 
+    #: Supported tectonic region type is ALPINE which
+    #: is a sub-region of Active Shallow Crust.
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration, see tables 3 and 4, pages 227 and 228.
@@ -76,28 +78,26 @@ class EdwardsFah2013Alpine60MPa(GMPE):
         """
 
         C = self.COEFFS[imt]
-        R = self._compute_term_r(C, rup.mag, dists.rrup) 
-    
-        mean = 10**(self._compute_mean(C, rup.mag, R))
-       
+        R = self._compute_term_r(C, rup.mag, dists.rrup)
+
+        mean = 10 ** (self._compute_mean(C, rup.mag, R))
+
         # Convert units to g,
         # but only for PGA and SA (not PGV):
         if isinstance(imt, (PGA, SA)):
             mean = np.log(mean / 981)
         else:
             # PGV:
-            mean = np.log( mean)
-
+            mean = np.log(mean)
 
         stddevs = self._get_stddevs(C, stddev_types, sites.vs30.shape[0])
 
-
         return mean, stddevs
 
-        #return stddevs
+        # return stddevs
     def _get_stddevs(self, C, stddev_types, num_sites):
         """
-        Return standard deviations 
+        Return standard deviations
         """
         stddevs = []
         for stddev_type in stddev_types:
@@ -105,11 +105,10 @@ class EdwardsFah2013Alpine60MPa(GMPE):
             if stddev_type == const.StdDev.TOTAL:
                 stddevs.append(C['sigma_tot'] + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append( C['phi_SS'] + np.zeros(num_sites))
+                stddevs.append(C['phi_SS'] + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append( C['tau'] + np.zeros(num_sites))
+                stddevs.append(C['tau'] + np.zeros(num_sites))
         return stddevs
-
 
     def _compute_term_r(self, C, mag, rrup):
         """
@@ -118,38 +117,36 @@ class EdwardsFah2013Alpine60MPa(GMPE):
         """
         if mag > self.M1:
             rrup_min = 0.55
-            
+
         elif mag > self.M2:
             rrup_min = -2.80 * mag + 14.55
-            
+
         else:
             rrup_min = -0.295 * mag + 2.65
 
-
         R = np.maximum(rrup_min, rrup)
-        
-        
+
         return np.log10(R)
-        
-        
+
     def _compute_term_1(self, C, mag):
         """
         Compute term 1
         a1 + a2.*M + a3.*M.^2 + a4.*M.^3 + a5.*M.^4 + a6.*M.^5 + a7.*M.^6
         """
         return (
-                C['a1'] + C['a2'] * mag + C['a3'] * np.power(mag,2) + C['a4'] * np.power(mag,3) 
-                + C['a5'] * np.power(mag,4) + C['a6'] * np.power(mag,5) + C['a7'] * np.power(mag,6)
+            C['a1'] + C['a2'] * mag + C['a3'] *
+            np.power(mag, 2) + C['a4'] * np.power(mag, 3)
+            + C['a5'] * np.power(mag, 4) + C['a6'] *
+            np.power(mag, 5) + C['a7'] * np.power(mag, 6)
         )
-
 
     def _compute_term_2(self, C, mag, R):
         """
         (a8 + a9.*M + a10.*M.*M + a11.*M.*M.*M).*d(r)
         """
         return (
-                (C['a8'] + C['a9'] * mag + C['a10'] * np.power(mag,2) + 
-                C['a11']* np.power(mag,3)) * R       
+            (C['a8'] + C['a9'] * mag + C['a10'] * np.power(mag, 2) +
+             C['a11'] * np.power(mag, 3)) * R
         )
 
     def _compute_term_3(self, C, mag, R):
@@ -157,8 +154,8 @@ class EdwardsFah2013Alpine60MPa(GMPE):
         (a12 + a13.*M + a14.*M.*M + a15.*M.*M.*M).*(d(r).^2)
         """
         return (
-                (C['a12'] + C['a13'] * mag + C['a14'] * np.power(mag,2) + 
-                C['a15'] * np.power(mag,3)) * np.power(R, 2)
+            (C['a12'] + C['a13'] * mag + C['a14'] * np.power(mag, 2) +
+             C['a15'] * np.power(mag, 3)) * np.power(R, 2)
         )
 
     def _compute_term_4(self, C, mag, R):
@@ -166,38 +163,36 @@ class EdwardsFah2013Alpine60MPa(GMPE):
         (a16 + a17.*M + a18.*M.*M + a19.*M.*M.*M).*(d(r).^3)
         """
         return (
-                (C['a16'] + C['a17'] * mag + C['a18'] * np.power(mag,2) + 
-                C['a19'] * np.power(mag,3)) * np.power(R,3)
+            (C['a16'] + C['a17'] * mag + C['a18'] * np.power(mag, 2) +
+             C['a19'] * np.power(mag, 3)) * np.power(R, 3)
         )
-
 
     def _compute_term_5(self, C, mag, R):
         """
         (a20 + a21.*M + a22.*M.*M + a23.*M.*M.*M).*(d(r).^4)
         """
         return (
-                (C['a20'] + C['a21'] * mag + C['a22'] * np.power(mag,2) + 
-                C['a23'] * np.power(mag,3)) * np.power(R,4)
-         )
-    def _compute_mean(self, C , mag, term_dist_r):
-    	  """
-    	  compute mean 
-    	  """
-    	  return (
-    	      self._compute_term_1(C, mag) + 
-            self._compute_term_2(C, mag, term_dist_r) + 
-            self._compute_term_3(C, mag, term_dist_r) + 
-            self._compute_term_4(C, mag, term_dist_r) + 
+            (C['a20'] + C['a21'] * mag + C['a22'] * np.power(mag, 2) +
+             C['a23'] * np.power(mag, 3)) * np.power(R, 4)
+        )
+
+    def _compute_mean(self, C, mag, term_dist_r):
+        """
+        compute mean
+        """
+        return (
+            self._compute_term_1(C, mag) +
+            self._compute_term_2(C, mag, term_dist_r) +
+            self._compute_term_3(C, mag, term_dist_r) +
+            self._compute_term_4(C, mag, term_dist_r) +
             self._compute_term_5(C, mag, term_dist_r)
         )
 
-        
-   #: Fixed magnitude terms
+    #: Fixed magnitude terms
+    M1 = 5.00
+    M2 = 4.70
 
-    M1= 5.00
-    M2= 4.70
-
-   #: Coefficient table as submited by Carlo Cauzzi (no documentation -personal communication)
+    #: Coefficient table as submited by Carlo Cauzzi (no documentation -personal communication)
     COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT        a1                     a2                      a3                      a4                       a5                       a6                        a7                         a8                      a9                       a10                     a11                       a12                     a13                      a14                      a15                        a16                    a17                       a18                       a19                        a20                      a21                       a22                        a23                        tau     phi_SS  sigma_tot phi_11 phi_21  C2     Mc1 Mc2 Rc11 Rc21
 pgv        -8.65875145149632      7.85817700835325        -4.37604485905558       1.52739461974064         -0.284706616386616       0.0261357301466931        -0.000933130429778511      3.11537783603186        -1.94375128235722        0.352135879004547       -0.0201605473274912       -4.56711247403471       1.58575418689428         -0.233405179755817       0.0134531673741502         1.99257330049254       -0.585055071136962        0.0635009483831737        -0.00290923000116716       -0.323156152322977       0.0803365659780564        -0.00510932500205881       3.79546159737313e-05       0.5010  0.4600  0.68015  0.00000 0.00000 0.00000 5   7   16  36
@@ -256,6 +251,7 @@ pga        -5.31469000163385      6.29572485962852        -3.74491587095984     
 8          -9.1796161266094       3.5781245586623         -0.993043607513015      0.352513068748286        -0.0771607041254957      0.00819243236517093       -0.000331887710819227      7.86250187925788        -3.69570811421508        0.5604321701027         -0.0280208937560745       -10.3391322055039       3.60529393602782         -0.466264632914397       0.0221633160505526         5.07912054871935       -1.84895208211491         0.249060057017656         -0.012312515226379         -0.877499127618483       0.343434856293276         -0.0492974084609317        0.00252139350759871        0.3244  0.4100  0.52282  0.53000 0.40000 0.40000 5   7   16  36
 10         -11.030416932437       6.4073906881075         -2.78872801692642       0.9220857725619          -0.173662685554259       0.0165097358257458        -0.000617444372892825      7.24803069617542        -3.65629472617652        0.590630841586317       -0.0312711518118421       -9.7325653015372        3.81629835282476         -0.564462507535905       0.030013935165111          4.8242446831363        -2.03005414194837         0.312885387538251         -0.0169624719152322        -0.837632534522922       0.380527293209967         -0.0611530356764195        0.00334168724343673        0.3293  0.4100  0.52588  0.53000 0.40000 0.40000 5   7   16  36
 """)
+
 
 class EdwardsFah2013Alpine10MPa(EdwardsFah2013Alpine60MPa):
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -316,6 +312,8 @@ pga         -4.95222817214066      5.57658327256026       -2.93739649357216     
 8          -5.05887349849838      -2.42229367141502      2.80460475213018       -0.930608396463293      0.15645126762248         -0.0132988833334388        0.000448656496196594       6.90760243551623         -3.1228943554662        0.449261867030979      -0.0211036254614461       -9.78978280026697      3.34131060456186      -0.418237184260972      0.0191329398555369       4.74990023448993       -1.69780055875101       0.227994214706586       -0.0114159984838179        -0.806804607932295      0.310669747637311       -0.0454193985878918       0.00242210479676379       0.3244  0.4100  0.52282  0.53000 0.40000 0.40000 5   7   16  36
 10         -5.8007586747662       -1.2658468980392       1.97581558699183       -0.63653441383809       0.100857640438812        -0.00798460886972265       0.000248186696977229       6.18996962135453         -2.98256016581481       0.456061705068717      -0.0227999670958581       -9.03305398501815      3.42758128117858      -0.492457093216468      0.0256686238132356       4.49192180764796       -1.87719579553943       0.29499856370269        -0.016517434147936         -0.779372881787741      0.357842010752413       -0.0602692635867201       0.00349158214771011       0.3293  0.4100  0.52588  0.53000 0.40000 0.40000 5   7   16  36
     """)
+
+
 class EdwardsFah2013Alpine20MPa(EdwardsFah2013Alpine60MPa):
     COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT     a1                  a2                  a3                  a4                  a5                      a6                      a7                      a8                  a9                  a10                 a11                     a12                 a13                 a14                 a15                     a16                 a17                 a18                 a19                     a20                 a21                     a22                     a23                     tau    phi_SS  sigma_tot  phi_11  phi_21  C2      Mc1 Mc2 Rc11 Rc21
@@ -375,6 +373,8 @@ pga     -4.96953455014154   5.82067856086996    -3.2768350343017    1.1684509184
 8       -6.06455608889937   -0.943449354266199  1.81697115801755    -0.574746723263349  0.0880486519563544      -0.00672724409555567    0.000201557019825063    7.10073788375401    -3.21420359770589   0.464998404759224   -0.0220474770403571     -9.82441373957094   3.30887571473712    -0.407987495095502  0.0184369281973525      4.82232322873564    -1.71407237602152   0.227108798710474   -0.0111791747718704     -0.829797827545474  0.319872077635461       -0.0461840792343584     0.00241375476287162     0.3244  0.4100  0.52282  0.53000 0.40000 0.40000 5   7   16  36
 10      -7.5717793835432    1.38092657540823    0.291567219456898   -0.0720604290901808 -0.000734361388540064   0.00125720155755716     -8.42157134229904e-05   6.44856220479746    -3.12903826152125   0.483802792451363   -0.0245138277273963     -9.16279362497034   3.46655002881849    -0.495557733628144  0.0257022159744324      4.58765272836436    -1.90789920147259   0.295255507819644   -0.0162298613905411     -0.801763658743867  0.365746440081433       -0.0603144359090216     0.00340897628335253     0.3293  0.4100  0.52588  0.53000 0.40000 0.40000 5   7   16  36
 """)
+
+
 class EdwardsFah2013Alpine30MPa(EdwardsFah2013Alpine60MPa):
     COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT     a1                      a2                  a3                  a4                  a5                      a6                      a7                      a8                  a9                  a10                     a11                     a12                     a13                 a14                 a15                     a16                 a17                 a18                     a19                     a20                 a21                     a22                     a23                     tau    phi_SS  sigma_tot  phi_11  phi_21  C2      Mc1 Mc2 Rc11 Rc21
@@ -434,6 +434,7 @@ pga     -5.71741545930115      6.75676066771624     -3.85347395057457   1.369549
 8.000   -7.05597524602239      0.496738333754760     0.910073727655276  -0.269988854931764   0.0327933896581766     -0.00165933331679218     1.78904644661442e-05   7.35582128133733    -3.369416613927210  0.4950505738558620      -0.0239028043257329     -9.99270122597201       3.3975372751163     -0.424415855416397  0.01945422182746        4.91666150051552    -1.76143170713736   0.234445225778897       -0.0115379419987368     -0.848952713110261  0.329398657473949       -0.0474807968507647     0.0024620736195773      0.3244  0.4100  0.52282  0.53000 0.40000 0.40000 5   7   16  36
 10.00   -8.84235151039667      3.239490569684570    -0.856827685808916   0.301690757093318  -0.0663008500872744      0.00709035320719849    -0.000289932346434402   6.73530041669423    -3.312402736522330  0.5202150682418290      -0.0267878285244298     -9.3758856483688        3.59045134492446    -0.518849767515115  0.0271096620447494      4.68836659602167    -1.95937224856324   0.302649673470594       -0.01653727522587       -0.819120990468147  0.373666949305236       -0.061075839709767      0.00341029422857993     0.3293  0.4100  0.52588  0.53000 0.40000 0.40000 5   7   16  36
     """)
+
 
 class EdwardsFah2013Alpine50MPa(EdwardsFah2013Alpine60MPa):
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -495,6 +496,7 @@ pga      -5.59030023944254  6.69983150227806    -3.94497081548402   1.4438812655
 10.00    -10.3837541428057  5.47650331910390    -2.22509123259836   0.742386538803105   -0.14279264490099   0.0138216515404767      -0.000524696977114909   7.09314297954152    -3.55008000264125   0.568593200359083   -0.0298568843701883     -9.62634853349033   3.74596953603524    -0.549794113299229      0.0290600891183059      4.78781287693964    -2.010452117059     0.309932564149234       -0.0168326636777266     -0.833452405096288  0.37920812089815        -0.0612486220754326     0.003368216240734       0.3293  0.4100  0.52588  0.53000 0.40000 0.40000 5   7   16  36
     """)
 
+
 class EdwardsFah2013Alpine75MPa(EdwardsFah2013Alpine60MPa):
     COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT     a1                  a2                  a3                  a4                  a5                           a6                         a7                      a8                  a9                  a10                 a11                     a12                 a13                 a14                     a15                     a16                 a17                 a18                     a19                     a20                 a21                     a22                     a23                     tau    phi_SS  sigma_tot  phi_11  phi_21  C2      Mc1 Mc2 Rc11 Rc21
@@ -554,6 +556,7 @@ pga     -6.49637351492575   7.87173863446885    -4.65111097711909   1.6798154951
 8.00    -9.73422704320600   4.37761753298518    -1.48050061271611   0.50950766291239    -0.104467590147923           0.010603585455453600       -0.000416324566514146    7.998346968816910  -3.7851877207237    0.578620200755153   -0.0291759571908356     -10.434497723113    3.66549789754518    -0.478796341123511      0.0229884793398445      5.11788655410578    -1.87042671668226   0.252792599442768       -0.0125188375226768     -0.883307171064198  0.346135273473453       -0.0496088370935914     0.00252835893448223     0.3244  0.4100  0.52282  0.53000 0.40000 0.40000 5   7   16  36
 10.0    -11.4997540658424   7.07730436398346    -3.19303215572863   1.05093724206555    -0.19577311955085            0.018429815094604000       -0.000683404151488038    7.371283108860070  -3.74078098699777   0.608202528331009   -0.0324013627293985     -9.81432180047924   3.87043814380671    -0.575885549856136      0.0307649867858398      4.84912628663873    -2.04273433997934   0.314682756031614       -0.0170342130323825     -0.839835255862144  0.380767393020544       -0.0609159651428684     0.00331087699129787     0.3293  0.4100  0.52588  0.53000 0.40000 0.40000 5   7   16  36
     """)
+
 
 class EdwardsFah2013Alpine90MPa(EdwardsFah2013Alpine60MPa):
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -615,6 +618,7 @@ pga     -6.65272663705094   8.08878595298962    -4.80269233584456   1.7380991941
 10      -11.9364654874712   7.69701806383256    -3.56524547690055   1.16913255093572    -0.215972168569508      0.0201751879449513      -0.000743008256826006   7.4885926958246     -3.82276360580006   0.625447003754857   -0.0335178838563254     -9.88928440872158       3.92205669671066        -0.587080806386783  0.0315134724726338      4.86878122646019        -2.05283443148545       0.316097357476342       -0.0170879851466899     -0.840810234946994      0.380324378921919       -0.0605634517510679     0.00327384056736418     0.3293  0.4100  0.52588  0.53000 0.40000 0.40000 5   7   16  36
     """)
 
+
 class EdwardsFah2013Alpine120MPa(EdwardsFah2013Alpine60MPa):
     COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT     a1                  a2                  a3                  a4                  a5                  a6                      a7                      a8                  a9                  a10                     a11                     a12                 a13                 a14                     a15                     a16                 a17                 a18                 a19                     a20                     a21                     a22                     a23                     tau    phi_SS  sigma_tot  phi_11  phi_21  C2      Mc1 Mc2 Rc11 Rc21
@@ -674,45 +678,49 @@ pga     -6.88231352240753   8.40625353693458    -5.02569957433775   1.8245241479
 8.000   -11.087582067043    6.31918359084893    -2.65660011887733   0.885704573538717   -0.169417563021583  0.0162932068686083      -0.000613913890379303   8.33358568704997    -4.01281202628224   0.625767148646312       -0.032204892356232      -10.6685351978147   3.82254992555098    -0.512860458134614      0.0252863373098357      5.2051245323595     -1.92176581938289   0.262282599546393   -0.0130737617517631     -0.894833427629427      0.351481132785386       -0.0501978653411605     0.00253837202388271     0.3244  0.4100  0.52282  0.53000 0.40000 0.40000 5   7   16  36
 10.00   -12.5414320889531   8.54495254333636    -4.07044990992193   1.32873848682302    -0.243081229451699  0.0224988176343856      -0.00082156196294421    7.66172131326708    -3.94485757705519   0.651334791113019       -0.0352040065490708     -9.99737472531347   3.99830693255826    -0.60405148499109       0.0326700670966756      4.89299289315057    -2.06506206619852   0.317795008898314   -0.0171519647919213     -0.840860287000719      0.378775815314078       -0.0598780446893658     0.00320996962208241     0.3293  0.4100  0.52588  0.53000 0.40000 0.40000 5   7   16  36
 """)
+
+
 class EdwardsFah2013Alpine60MPaMR(EdwardsFah2013Alpine60MPa):
+
     """
-    Adjustment of a single station sigma for magnitude and distance dependance 
+    Adjustment of a single station sigma for magnitude and distance dependance
     """
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         adjust the median values to the soil-type used for Swiss Hazard 2013
         Vs30 = 1100m/s
         """
         C = self.COEFFS[imt]
-        C1_rrup =self._compute_C1_term(C,imt, dists)
+        C1_rrup = self._compute_C1_term(C, imt, dists)
         phi_ss_mr = self._compute_phi_ss(C, rup, C1_rrup, imt)
 
-        mean, stddevs = super(EdwardsFah2013Alpine60MPaMR,self).\
-        get_mean_and_stddevs(sites,rup,dists,imt,stddev_types)
-        std_corr = self._get_corr_stddevs(self.COEFFS[imt], stddev_types,len(sites.vs30),phi_ss_mr)
-    
+        mean, stddevs = super(EdwardsFah2013Alpine60MPaMR, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        std_corr = self._get_corr_stddevs(
+            self.COEFFS[imt], stddev_types, len(sites.vs30), phi_ss_mr)
+
         stddevs = np.array(std_corr)
         return mean, stddevs
 
-    def _compute_C1_term( self, C, imt,dists ):
+    def _compute_C1_term(self, C, imt, dists):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
         """
-        C1_rrup =0.0
-        
-        if dists.rrup < C['Rc11']:
+        C1_rrup = 0.0
+
+        if (dists.rrup < C['Rc11']).any():
             C1_rrup = C['phi_11']
-            #~ print 'case01 rrup< ', C1_rrup
-        elif dists.rrup >= C['Rc11'] and dists.rrup <= C['Rc21']:
-            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
-            #~ print 'case02 rrup> < ', C1_rrup
-        elif dists.rrup > C['Rc21']:
+        elif ((dists.rrup >= C['Rc11']).any()
+                and (dists.rrup <= C['Rc21']).any()):
+            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * \
+                ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
+        elif (dists.rrup > C['Rc21']).any():
             C1_rrup = C['phi_21']
-            #~ print 'case03 rrup> ', C1_rrup
         return C1_rrup
 
-    def _compute_phi_ss( self, C, rup, C1_rrup ,imt):
+    def _compute_phi_ss(self, C, rup, C1_rrup, imt):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
@@ -722,69 +730,71 @@ class EdwardsFah2013Alpine60MPaMR(EdwardsFah2013Alpine60MPa):
 
         if rup.mag < C['Mc1']:
             phi_ss = C1_rrup
-            #~ print phi_ss
 
         elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
-            phi_ss = C1_rrup + (C['C2'] - C1_rrup) * ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
-            #~ print phi_ss
+            phi_ss = C1_rrup + \
+                (C['C2'] - C1_rrup) * \
+                ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
 
         elif rup.mag > C['Mc2']:
             phi_ss = C['C2']
-            #~ print phi_ss
-        return phi_ss 
+        return phi_ss
 
-    def _get_corr_stddevs( self, C, stddev_types, num_sites, phi_ss):
+    def _get_corr_stddevs(self, C, stddev_types, num_sites, phi_ss):
         """
         Return standard deviations adjusted for single station sigma
         as proposed to be used in the new Swiss Hazard Model [2014].
         """
         stddevs = []
-        #~ print 'tau:',C['tau'], 'phis_ss-->', phi_ss
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(C['tau']**2 + phi_ss**2) + np.zeros(num_sites))
+                stddevs.append(
+                    np.sqrt(C['tau'] ** 2 + phi_ss ** 2) + np.zeros(num_sites))
         return stddevs
-        
+
+
 class EdwardsFah2013Alpine10MPaMR(EdwardsFah2013Alpine10MPa):
+
     """
-    Adjustment of a single station sigma for magnitude and distance dependance 
+    Adjustment of a single station sigma for magnitude and distance dependance
     """
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         adjust the median values to the soil-type used for Swiss Hazard 2013
         Vs30 = 1100m/s
         """
         C = self.COEFFS[imt]
-        C1_rrup =self._compute_C1_term(C,imt, dists)
+        C1_rrup = self._compute_C1_term(C, imt, dists)
         phi_ss_mr = self._compute_phi_ss(C, rup, C1_rrup, imt)
 
-        mean, stddevs = super(EdwardsFah2013Alpine10MPaMR,self).\
-        get_mean_and_stddevs(sites,rup,dists,imt,stddev_types)
-        std_corr = self._get_corr_stddevs(self.COEFFS[imt], stddev_types,len(sites.vs30),phi_ss_mr)
-    
+        mean, stddevs = super(EdwardsFah2013Alpine10MPaMR, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        std_corr = self._get_corr_stddevs(
+            self.COEFFS[imt], stddev_types, len(sites.vs30), phi_ss_mr)
+
         stddevs = np.array(std_corr)
         return mean, stddevs
 
-    def _compute_C1_term( self, C, imt,dists ):
+    def _compute_C1_term(self, C, imt, dists):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
         """
-        C1_rrup =0.0
-        
-        if dists.rrup < C['Rc11']:
+        C1_rrup = 0.0
+
+        if (dists.rrup < C['Rc11']).any():
             C1_rrup = C['phi_11']
-            #~ print 'case01 rrup< ', C1_rrup
-        elif dists.rrup >= C['Rc11'] and dists.rrup <= C['Rc21']:
-            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
-            #~ print 'case02 rrup> < ', C1_rrup
-        elif dists.rrup > C['Rc21']:
+        elif ((dists.rrup >= C['Rc11']).any()
+                and (dists.rrup <= C['Rc21']).any()):
+            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * \
+                ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
+        elif (dists.rrup > C['Rc21']).any():
             C1_rrup = C['phi_21']
-            #~ print 'case03 rrup> ', C1_rrup
         return C1_rrup
 
-    def _compute_phi_ss( self, C, rup, C1_rrup ,imt):
+    def _compute_phi_ss(self, C, rup, C1_rrup, imt):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
@@ -794,71 +804,71 @@ class EdwardsFah2013Alpine10MPaMR(EdwardsFah2013Alpine10MPa):
 
         if rup.mag < C['Mc1']:
             phi_ss = C1_rrup
-            #~ print phi_ss
 
         elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
-            phi_ss = C1_rrup + (C['C2'] - C1_rrup) * ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
-            #~ print phi_ss
+            phi_ss = C1_rrup + \
+                (C['C2'] - C1_rrup) * \
+                ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
 
         elif rup.mag > C['Mc2']:
             phi_ss = C['C2']
-            #~ print phi_ss
-        return phi_ss 
+        return phi_ss
 
-    def _get_corr_stddevs( self, C, stddev_types, num_sites, phi_ss):
+    def _get_corr_stddevs(self, C, stddev_types, num_sites, phi_ss):
         """
         Return standard deviations adjusted for single station sigma
         as proposed to be used in the new Swiss Hazard Model [2014].
         """
         stddevs = []
-        #~ print 'tau:',C['tau'], 'phis_ss-->', phi_ss
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(C['tau']**2 + phi_ss**2) + np.zeros(num_sites))
+                stddevs.append(
+                    np.sqrt(C['tau'] ** 2 + phi_ss ** 2) + np.zeros(num_sites))
         return stddevs
+
 
 class EdwardsFah2013Alpine20MPaMR(EdwardsFah2013Alpine20MPa):
 
     """
-    Adjustment of a single station sigma for magnitude and distance dependance 
+    Adjustment of a single station sigma for magnitude and distance dependance
     """
-    
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         adjust the median values to the soil-type used for Swiss Hazard 2013
         Vs30 = 1100m/s
         """
         C = self.COEFFS[imt]
-        C1_rrup =self._compute_C1_term(C,imt, dists)
+        C1_rrup = self._compute_C1_term(C, imt, dists)
         phi_ss_mr = self._compute_phi_ss(C, rup, C1_rrup, imt)
 
-        mean, stddevs = super(EdwardsFah2013Alpine20MPaMR,self).\
-        get_mean_and_stddevs(sites,rup,dists,imt,stddev_types)
-        std_corr = self._get_corr_stddevs(self.COEFFS[imt], stddev_types,len(sites.vs30),phi_ss_mr)
-    
+        mean, stddevs = super(EdwardsFah2013Alpine20MPaMR, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        std_corr = self._get_corr_stddevs(
+            self.COEFFS[imt], stddev_types, len(sites.vs30), phi_ss_mr)
+
         stddevs = np.array(std_corr)
         return mean, stddevs
 
-    def _compute_C1_term( self, C, imt,dists ):
+    def _compute_C1_term(self, C, imt, dists):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
         """
-        C1_rrup =0.0
-        
-        if dists.rrup < C['Rc11']:
+        C1_rrup = 0.0
+
+        if (dists.rrup < C['Rc11']).any():
             C1_rrup = C['phi_11']
-            #~ print 'case01 rrup< ', C1_rrup
-        elif dists.rrup >= C['Rc11'] and dists.rrup <= C['Rc21']:
-            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
-            #~ print 'case02 rrup> < ', C1_rrup
-        elif dists.rrup > C['Rc21']:
+        elif ((dists.rrup >= C['Rc11']).any()
+                and (dists.rrup <= C['Rc21']).any()):
+            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * \
+                ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
+        elif (dists.rrup > C['Rc21']).any():
             C1_rrup = C['phi_21']
-            #~ print 'case03 rrup> ', C1_rrup
         return C1_rrup
 
-    def _compute_phi_ss( self, C, rup, C1_rrup ,imt):
+    def _compute_phi_ss(self, C, rup, C1_rrup, imt):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
@@ -868,70 +878,71 @@ class EdwardsFah2013Alpine20MPaMR(EdwardsFah2013Alpine20MPa):
 
         if rup.mag < C['Mc1']:
             phi_ss = C1_rrup
-            #~ print phi_ss
 
         elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
-            phi_ss = C1_rrup + (C['C2'] - C1_rrup) * ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
-            #~ print phi_ss
+            phi_ss = C1_rrup + \
+                (C['C2'] - C1_rrup) * \
+                ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
 
         elif rup.mag > C['Mc2']:
             phi_ss = C['C2']
-            #~ print phi_ss
-        return phi_ss 
+        return phi_ss
 
-    def _get_corr_stddevs( self, C, stddev_types, num_sites, phi_ss):
+    def _get_corr_stddevs(self, C, stddev_types, num_sites, phi_ss):
         """
         Return standard deviations adjusted for single station sigma
         as proposed to be used in the new Swiss Hazard Model [2014].
         """
         stddevs = []
-        #~ print 'tau:',C['tau'], 'phis_ss-->', phi_ss
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(C['tau']**2 + phi_ss**2) + np.zeros(num_sites))
+                stddevs.append(
+                    np.sqrt(C['tau'] ** 2 + phi_ss ** 2) + np.zeros(num_sites))
         return stddevs
+
 
 class EdwardsFah2013Alpine30MPaMR(EdwardsFah2013Alpine30MPa):
 
     """
-    Adjustment of a single station sigma for magnitude and distance dependance 
+    Adjustment of a single station sigma for magnitude and distance dependance
     """
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         adjust the median values to the soil-type used for Swiss Hazard 2013
         Vs30 = 1100m/s
         """
         C = self.COEFFS[imt]
-        C1_rrup =self._compute_C1_term(C,imt, dists)
+        C1_rrup = self._compute_C1_term(C, imt, dists)
         phi_ss_mr = self._compute_phi_ss(C, rup, C1_rrup, imt)
 
-        mean, stddevs = super(EdwardsFah2013Alpine30MPaMR,self).\
-        get_mean_and_stddevs(sites,rup,dists,imt,stddev_types)
-        std_corr = self._get_corr_stddevs(self.COEFFS[imt], stddev_types,len(sites.vs30),phi_ss_mr)
-    
+        mean, stddevs = super(EdwardsFah2013Alpine30MPaMR, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        std_corr = self._get_corr_stddevs(
+            self.COEFFS[imt], stddev_types, len(sites.vs30), phi_ss_mr)
+
         stddevs = np.array(std_corr)
         return mean, stddevs
 
-    def _compute_C1_term( self, C, imt,dists ):
+    def _compute_C1_term(self, C, imt, dists):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
         """
-        C1_rrup =0.0
-        
-        if dists.rrup < C['Rc11']:
+        C1_rrup = 0.0
+
+        if (dists.rrup < C['Rc11']).any():
             C1_rrup = C['phi_11']
-            #~ print 'case01 rrup< ', C1_rrup
-        elif dists.rrup >= C['Rc11'] and dists.rrup <= C['Rc21']:
-            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
-            #~ print 'case02 rrup> < ', C1_rrup
-        elif dists.rrup > C['Rc21']:
+        elif ((dists.rrup >= C['Rc11']).any()
+                and (dists.rrup <= C['Rc21']).any()):
+            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * \
+                ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
+        elif (dists.rrup > C['Rc21']).any():
             C1_rrup = C['phi_21']
-            #~ print 'case03 rrup> ', C1_rrup
         return C1_rrup
 
-    def _compute_phi_ss( self, C, rup, C1_rrup ,imt):
+    def _compute_phi_ss(self, C, rup, C1_rrup, imt):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
@@ -941,70 +952,71 @@ class EdwardsFah2013Alpine30MPaMR(EdwardsFah2013Alpine30MPa):
 
         if rup.mag < C['Mc1']:
             phi_ss = C1_rrup
-            #~ print phi_ss
 
         elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
-            phi_ss = C1_rrup + (C['C2'] - C1_rrup) * ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
-            #~ print phi_ss
+            phi_ss = C1_rrup + \
+                (C['C2'] - C1_rrup) * \
+                ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
 
         elif rup.mag > C['Mc2']:
             phi_ss = C['C2']
-            #~ print phi_ss
-        return phi_ss 
+        return phi_ss
 
-    def _get_corr_stddevs( self, C, stddev_types, num_sites, phi_ss):
+    def _get_corr_stddevs(self, C, stddev_types, num_sites, phi_ss):
         """
         Return standard deviations adjusted for single station sigma
         as proposed to be used in the new Swiss Hazard Model [2014].
         """
         stddevs = []
-        #~ print 'tau:',C['tau'], 'phis_ss-->', phi_ss
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(C['tau']**2 + phi_ss**2) + np.zeros(num_sites))
+                stddevs.append(
+                    np.sqrt(C['tau'] ** 2 + phi_ss ** 2) + np.zeros(num_sites))
         return stddevs
+
 
 class EdwardsFah2013Alpine50MPaMR(EdwardsFah2013Alpine50MPa):
 
     """
-    Adjustment of a single station sigma for magnitude and distance dependance 
+    Adjustment of a single station sigma for magnitude and distance dependance
     """
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         adjust the median values to the soil-type used for Swiss Hazard 2013
         Vs30 = 1100m/s
         """
         C = self.COEFFS[imt]
-        C1_rrup =self._compute_C1_term(C,imt, dists)
+        C1_rrup = self._compute_C1_term(C, imt, dists)
         phi_ss_mr = self._compute_phi_ss(C, rup, C1_rrup, imt)
 
-        mean, stddevs = super(EdwardsFah2013Alpine50MPaMR,self).\
-        get_mean_and_stddevs(sites,rup,dists,imt,stddev_types)
-        std_corr = self._get_corr_stddevs(self.COEFFS[imt], stddev_types,len(sites.vs30),phi_ss_mr)
-    
+        mean, stddevs = super(EdwardsFah2013Alpine50MPaMR, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        std_corr = self._get_corr_stddevs(
+            self.COEFFS[imt], stddev_types, len(sites.vs30), phi_ss_mr)
+
         stddevs = np.array(std_corr)
         return mean, stddevs
 
-    def _compute_C1_term( self, C, imt,dists ):
+    def _compute_C1_term(self, C, imt, dists):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
         """
-        C1_rrup =0.0
-        
-        if dists.rrup < C['Rc11']:
+        C1_rrup = 0.0
+
+        if (dists.rrup < C['Rc11']).any():
             C1_rrup = C['phi_11']
-            #~ print 'case01 rrup< ', C1_rrup
-        elif dists.rrup >= C['Rc11'] and dists.rrup <= C['Rc21']:
-            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
-            #~ print 'case02 rrup> < ', C1_rrup
+        elif ((dists.rrup >= C['Rc11']).any()
+                and (dists.rrup <= C['Rc21']).any()):
+            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * \
+                ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
         elif dists.rrup > C['Rc21']:
             C1_rrup = C['phi_21']
-            #~ print 'case03 rrup> ', C1_rrup
         return C1_rrup
 
-    def _compute_phi_ss( self, C, rup, C1_rrup ,imt):
+    def _compute_phi_ss(self, C, rup, C1_rrup, imt):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
@@ -1014,70 +1026,71 @@ class EdwardsFah2013Alpine50MPaMR(EdwardsFah2013Alpine50MPa):
 
         if rup.mag < C['Mc1']:
             phi_ss = C1_rrup
-            #~ print phi_ss
 
         elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
-            phi_ss = C1_rrup + (C['C2'] - C1_rrup) * ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
-            #~ print phi_ss
+            phi_ss = C1_rrup + \
+                (C['C2'] - C1_rrup) * \
+                ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
 
         elif rup.mag > C['Mc2']:
             phi_ss = C['C2']
-            #~ print phi_ss
-        return phi_ss 
+        return phi_ss
 
-    def _get_corr_stddevs( self, C, stddev_types, num_sites, phi_ss):
+    def _get_corr_stddevs(self, C, stddev_types, num_sites, phi_ss):
         """
         Return standard deviations adjusted for single station sigma
         as proposed to be used in the new Swiss Hazard Model [2014].
         """
         stddevs = []
-        #~ print 'tau:',C['tau'], 'phis_ss-->', phi_ss
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(C['tau']**2 + phi_ss**2) + np.zeros(num_sites))
+                stddevs.append(
+                    np.sqrt(C['tau'] ** 2 + phi_ss ** 2) + np.zeros(num_sites))
         return stddevs
-        
+
+
 class EdwardsFah2013Alpine75MPaMR(EdwardsFah2013Alpine75MPa):
-    
+
     """
-    Adjustment of a single station sigma for magnitude and distance dependance 
+    Adjustment of a single station sigma for magnitude and distance dependance
     """
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         adjust the median values to the soil-type used for Swiss Hazard 2013
         Vs30 = 1100m/s
         """
         C = self.COEFFS[imt]
-        C1_rrup =self._compute_C1_term(C,imt, dists)
+        C1_rrup = self._compute_C1_term(C, imt, dists)
         phi_ss_mr = self._compute_phi_ss(C, rup, C1_rrup, imt)
 
-        mean, stddevs = super(EdwardsFah2013Alpine75MPaMR,self).\
-        get_mean_and_stddevs(sites,rup,dists,imt,stddev_types)
-        std_corr = self._get_corr_stddevs(self.COEFFS[imt], stddev_types,len(sites.vs30),phi_ss_mr)
-    
+        mean, stddevs = super(EdwardsFah2013Alpine75MPaMR, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        std_corr = self._get_corr_stddevs(
+            self.COEFFS[imt], stddev_types, len(sites.vs30), phi_ss_mr)
+
         stddevs = np.array(std_corr)
         return mean, stddevs
 
-    def _compute_C1_term( self, C, imt,dists ):
+    def _compute_C1_term(self, C, imt, dists):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
         """
-        C1_rrup =0.0
-        
-        if dists.rrup < C['Rc11']:
+        C1_rrup = 0.0
+
+        if (dists.rrup < C['Rc11']).any():
             C1_rrup = C['phi_11']
-            #~ print 'case01 rrup< ', C1_rrup
-        elif dists.rrup >= C['Rc11'] and dists.rrup <= C['Rc21']:
-            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
-            #~ print 'case02 rrup> < ', C1_rrup
-        elif dists.rrup > C['Rc21']:
+        elif ((dists.rrup >= C['Rc11']).any()
+                and (dists.rrup <= C['Rc21']).any()):
+            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * \
+                ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
+        elif (dists.rrup > C['Rc21']).any():
             C1_rrup = C['phi_21']
-            #~ print 'case03 rrup> ', C1_rrup
         return C1_rrup
 
-    def _compute_phi_ss( self, C, rup, C1_rrup ,imt):
+    def _compute_phi_ss(self, C, rup, C1_rrup, imt):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
@@ -1087,70 +1100,71 @@ class EdwardsFah2013Alpine75MPaMR(EdwardsFah2013Alpine75MPa):
 
         if rup.mag < C['Mc1']:
             phi_ss = C1_rrup
-            #~ print phi_ss
 
         elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
-            phi_ss = C1_rrup + (C['C2'] - C1_rrup) * ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
-            #~ print phi_ss
+            phi_ss = C1_rrup + \
+                (C['C2'] - C1_rrup) * \
+                ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
 
         elif rup.mag > C['Mc2']:
             phi_ss = C['C2']
-            #~ print phi_ss
-        return phi_ss 
+        return phi_ss
 
-    def _get_corr_stddevs( self, C, stddev_types, num_sites, phi_ss):
+    def _get_corr_stddevs(self, C, stddev_types, num_sites, phi_ss):
         """
         Return standard deviations adjusted for single station sigma
         as proposed to be used in the new Swiss Hazard Model [2014].
         """
         stddevs = []
-        #~ print 'tau:',C['tau'], 'phis_ss-->', phi_ss
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(C['tau']**2 + phi_ss**2) + np.zeros(num_sites))
+                stddevs.append(
+                    np.sqrt(C['tau'] ** 2 + phi_ss ** 2) + np.zeros(num_sites))
         return stddevs
-    
+
+
 class EdwardsFah2013Alpine90MPaMR(EdwardsFah2013Alpine90MPa):
 
     """
-    Adjustment of a single station sigma for magnitude and distance dependance 
+    Adjustment of a single station sigma for magnitude and distance dependance
     """
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         adjust the median values to the soil-type used for Swiss Hazard 2013
         Vs30 = 1100m/s
         """
         C = self.COEFFS[imt]
-        C1_rrup =self._compute_C1_term(C,imt, dists)
+        C1_rrup = self._compute_C1_term(C, imt, dists)
         phi_ss_mr = self._compute_phi_ss(C, rup, C1_rrup, imt)
 
-        mean, stddevs = super(EdwardsFah2013Alpine90MPaMR,self).\
-        get_mean_and_stddevs(sites,rup,dists,imt,stddev_types)
-        std_corr = self._get_corr_stddevs(self.COEFFS[imt], stddev_types,len(sites.vs30),phi_ss_mr)
-    
+        mean, stddevs = super(EdwardsFah2013Alpine90MPaMR, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        std_corr = self._get_corr_stddevs(
+            self.COEFFS[imt], stddev_types, len(sites.vs30), phi_ss_mr)
+
         stddevs = np.array(std_corr)
         return mean, stddevs
 
-    def _compute_C1_term( self, C, imt,dists ):
+    def _compute_C1_term(self, C, imt, dists):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
         """
-        C1_rrup =0.0
-        
-        if dists.rrup < C['Rc11']:
+        C1_rrup = 0.0
+
+        if (dists.rrup < C['Rc11']).any():
             C1_rrup = C['phi_11']
-            #~ print 'case01 rrup< ', C1_rrup
-        elif dists.rrup >= C['Rc11'] and dists.rrup <= C['Rc21']:
-            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
-            #~ print 'case02 rrup> < ', C1_rrup
-        elif dists.rrup > C['Rc21']:
+        elif ((dists.rrup >= C['Rc11']).any()
+                and (dists.rrup <= C['Rc21']).any()):
+            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * \
+                ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
+        elif (dists.rrup > C['Rc21']).any():
             C1_rrup = C['phi_21']
-            #~ print 'case03 rrup> ', C1_rrup
         return C1_rrup
 
-    def _compute_phi_ss( self, C, rup, C1_rrup ,imt):
+    def _compute_phi_ss(self, C, rup, C1_rrup, imt):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
@@ -1160,70 +1174,71 @@ class EdwardsFah2013Alpine90MPaMR(EdwardsFah2013Alpine90MPa):
 
         if rup.mag < C['Mc1']:
             phi_ss = C1_rrup
-            #~ print phi_ss
 
         elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
-            phi_ss = C1_rrup + (C['C2'] - C1_rrup) * ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
-            #~ print phi_ss
+            phi_ss = C1_rrup + \
+                (C['C2'] - C1_rrup) * \
+                ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
 
         elif rup.mag > C['Mc2']:
             phi_ss = C['C2']
-            #~ print phi_ss
-        return phi_ss 
+        return phi_ss
 
-    def _get_corr_stddevs( self, C, stddev_types, num_sites, phi_ss):
+    def _get_corr_stddevs(self, C, stddev_types, num_sites, phi_ss):
         """
         Return standard deviations adjusted for single station sigma
         as proposed to be used in the new Swiss Hazard Model [2014].
         """
         stddevs = []
-        #~ print 'tau:',C['tau'], 'phis_ss-->', phi_ss
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(C['tau']**2 + phi_ss**2) + np.zeros(num_sites))
+                stddevs.append(
+                    np.sqrt(C['tau'] ** 2 + phi_ss ** 2) + np.zeros(num_sites))
         return stddevs
+
 
 class EdwardsFah2013Alpine120MPaMR(EdwardsFah2013Alpine120MPa):
 
     """
-    Adjustment of a single station sigma for magnitude and distance dependance 
+    Adjustment of a single station sigma for magnitude and distance dependance
     """
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         adjust the median values to the soil-type used for Swiss Hazard 2013
         Vs30 = 1100m/s
         """
         C = self.COEFFS[imt]
-        C1_rrup =self._compute_C1_term(C,imt, dists)
+        C1_rrup = self._compute_C1_term(C, imt, dists)
         phi_ss_mr = self._compute_phi_ss(C, rup, C1_rrup, imt)
 
-        mean, stddevs = super(EdwardsFah2013Alpine120MPaMR,self).\
-        get_mean_and_stddevs(sites,rup,dists,imt,stddev_types)
-        std_corr = self._get_corr_stddevs(self.COEFFS[imt], stddev_types,len(sites.vs30),phi_ss_mr)
-    
+        mean, stddevs = super(EdwardsFah2013Alpine120MPaMR, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        std_corr = self._get_corr_stddevs(
+            self.COEFFS[imt], stddev_types, len(sites.vs30), phi_ss_mr)
+
         stddevs = np.array(std_corr)
         return mean, stddevs
 
-    def _compute_C1_term( self, C, imt,dists ):
+    def _compute_C1_term(self, C, imt, dists):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
         """
-        C1_rrup =0.0
-        
-        if dists.rrup < C['Rc11']:
+        C1_rrup = 0.0
+
+        if (dists.rrup < C['Rc11']).any():
             C1_rrup = C['phi_11']
-            #~ print 'case01 rrup< ', C1_rrup
-        elif dists.rrup >= C['Rc11'] and dists.rrup <= C['Rc21']:
-            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
-            #~ print 'case02 rrup> < ', C1_rrup
-        elif dists.rrup > C['Rc21']:
+        elif ((dists.rrup >= C['Rc11']).any()
+                and (dists.rrup <= C['Rc21']).any()):
+            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * \
+                ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
+        elif (dists.rrup > C['Rc21']).any():
             C1_rrup = C['phi_21']
-            #~ print 'case03 rrup> ', C1_rrup
         return C1_rrup
 
-    def _compute_phi_ss( self, C, rup, C1_rrup ,imt):
+    def _compute_phi_ss(self, C, rup, C1_rrup, imt):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
@@ -1233,27 +1248,25 @@ class EdwardsFah2013Alpine120MPaMR(EdwardsFah2013Alpine120MPa):
 
         if rup.mag < C['Mc1']:
             phi_ss = C1_rrup
-            #~ print phi_ss
 
         elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
-            phi_ss = C1_rrup + (C['C2'] - C1_rrup) * ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
-            #~ print phi_ss
+            phi_ss = C1_rrup + \
+                (C['C2'] - C1_rrup) * \
+                ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
 
         elif rup.mag > C['Mc2']:
             phi_ss = C['C2']
-            #~ print phi_ss
-        return phi_ss 
+        return phi_ss
 
-    def _get_corr_stddevs( self, C, stddev_types, num_sites, phi_ss):
+    def _get_corr_stddevs(self, C, stddev_types, num_sites, phi_ss):
         """
         Return standard deviations adjusted for single station sigma
         as proposed to be used in the new Swiss Hazard Model [2014].
         """
         stddevs = []
-        #~ print 'tau:',C['tau'], 'phis_ss-->', phi_ss
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(C['tau']**2 + phi_ss**2) + np.zeros(num_sites))
+                stddevs.append(
+                    np.sqrt(C['tau'] ** 2 + phi_ss ** 2) + np.zeros(num_sites))
         return stddevs
-

@@ -25,66 +25,67 @@ from scipy.constants import g
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGV, PGA, SA
-from openquake.hazardlib.gsim.edwards_fah_2013a import  EdwardsFah2013Alpine60MPa
+from openquake.hazardlib.gsim.edwards_fah_2013a import EdwardsFah2013Alpine60MPa
 
 
 class EdwardsFah2013Foreland60MPa(EdwardsFah2013Alpine60MPa):
+
     """
-    This function implements the GMPE developed by Ben Edwards and Donath Fah and published 
-    as "A Stochastic Ground-Motion Model for Switzerland" Bulletin of the Seismological 
+    This function implements the GMPE developed by Ben Edwards and Donath Fah and published
+    as "A Stochastic Ground-Motion Model for Switzerland" Bulletin of the Seismological
     Society of America, Vol. 103, No. 1, pp. 78–98, February 2013.
     The GMPE was parametrized by Carlo Cauzzi to be implemented in OpenQuake.
     This class implements the equations for 'Foreland - two
     tectonic regionalizations defined for the Switzerland -
     therefore this GMPE is region specific".
     """
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         compute mean for Foreland
         """
         C = self.COEFFS[imt]
-        R = self._compute_term_d(C, rup.mag, dists.rrup) 
-        
-        mean = 10**(self._compute_mean(C, rup.mag, R))
-        
+        R = self._compute_term_d(C, rup.mag, dists.rrup)
+
+        mean = 10 ** (self._compute_mean(C, rup.mag, R))
+
         # Convert units to g,
         # but only for PGA and SA (not PGV):
         if isinstance(imt, (PGA, SA)):
             mean = np.log(mean / 981)
         else:
             # PGV:
-            mean = np.log( mean)
-
+            mean = np.log(mean)
 
         stddevs = self._get_stddevs(C, stddev_types, sites.vs30.shape[0])
 
         return mean, stddevs
-        
-    def _compute_term_d (self, C, mag, rrup):
-       """
-       Compute distance term: original implementation from Carlo Cauzzi
-       if M > 5.5     rmin = 0.55;
-       elseif M > 4.7 rmin = -2.067.*M +11.92;
-       else           rmin = -0.291.*M + 3.48;
-       end
-       d = log10(max(R,rmin));
-       """
-       if mag > self.M1:
-       	rrup_min =0.55
-       elif mag > self.M2:
-       	rrup_min = -2.067* mag +11.92
-       else:
-       	rrup_min = -0.291 * mag + 3.48
-       
-       R = np.maximum(rrup_min, rrup)
 
-       return np.log10(R)
+    def _compute_term_d(self, C, mag, rrup):
+        """
+        Compute distance term: original implementation from Carlo Cauzzi
+        if M > 5.5     rmin = 0.55;
+        elseif M > 4.7 rmin = -2.067.*M +11.92;
+        else           rmin = -0.291.*M + 3.48;
+        end
+        d = log10(max(R,rmin));
+        """
+        if mag > self.M1:
+            rrup_min = 0.55
+        elif mag > self.M2:
+            rrup_min = -2.067 * mag + 11.92
+        else:
+            rrup_min = -0.291 * mag + 3.48
+
+        R = np.maximum(rrup_min, rrup)
+
+        return np.log10(R)
 
     #: Fixed magnitude terms
 
-    M1= 5.00
-    M2= 4.70 
-              
+    M1 = 5.00
+    M2 = 4.70
+
     #: Coefficient table as prepared by Carlo Cauzzi [personal communication]
     COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT        a1                     a2                       a3                       a4                      a5                       a6                        a7                         a8                       a9                       a10                       a11                        a12                    a13                      a14                       a15                        a16                     a17                      a18                       a19                        a20                      a21                       a22                        a23                             tau    phi_SS  sigma_tot  phi_11  phi_21  C2      Mc1 Mc2 Rc11 Rc21
@@ -145,8 +146,9 @@ pga        -4.87344448904996      5.72551392383395         -3.23511717883835    
 10         -8.20589620987515      3.26646849300338         -1.06278006635633        0.361098375861763       -0.0708012385106065      0.00688723487859206       -0.000262861786210615      1.5572334116826          -0.356898306386432       -0.00235683502439138      0.00208572021777938        -3.24271763091998      -0.255660621829228       0.166775624900545         -0.0104126803285788        1.76772257815016        0.0734893969252243       -0.0691078568544794       0.00415823683566276        -0.328631379970024       0.00636655422281645       0.00751331395567397        -0.000467751663634615           0.3293  0.4100  0.52588    0.53000 0.40000 0.40000 5   7   16  36
 """)
 
+
 class EdwardsFah2013Foreland10MPa(EdwardsFah2013Foreland60MPa):
-   COEFFS = CoeffsTable(sa_damping=5, table="""\
+    COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT        a1                     a2                      a3                       a4                         a5                        a6                         a7                         a8                       a9                        a10                       a11                        a12                     a13                      a14                       a15                        a16                    a17                       a18                       a19                        a20                     a21                       a22                        a23                             tau    phi_SS  sigma_tot  phi_11  phi_21  C2      Mc1 Mc2 Rc11 Rc21
 pgv        -5.26703737213063      3.13626055595851        -1.28721490767671        0.436079788498271          -0.0829694150747114       0.00771941667433342        -0.000277067746761317      0.74508294283781         -0.177550060398838        -0.00692405597192397      0.00140980488088061        -2.73428576422863       -0.241021771853078       0.134037341082296         -0.00744900618819384       1.4320858073911        0.21696583939213          -0.091577923509563        0.00530347186733211        -0.274542030927066      -0.037119151249474        0.0168338402506107         -0.0010443484939524             0.5010  0.4600  0.68015    0.00000 0.00000 0.00000 5   7   16  36
 pga        -3.32670943088517      3.5556355694027         -1.66796867190138        0.555994862354272          -0.102788396912392        0.00936561238918964        -0.00033180439271463       0.555130811558793        -0.144572670521034        -0.00528485560008013      0.000986829030292697       -2.38483573457844       -0.408692340930479       0.165923710215004         -0.00952080426240121       1.22824738940427       0.319867067519261         -0.114640382921819        0.00698469487064828        -0.255141025194734      -0.0488239178206482       0.0199848093149447         -0.00130916077711155            0.3532  0.4600  0.57998    0.58000 0.47000 0.35000 5   7   16  36
@@ -204,8 +206,10 @@ pga        -3.32670943088517      3.5556355694027         -1.66796867190138     
 8          -3.92072601500178      -2.65162634232736       2.5768640495621          -0.841209365490053         0.145397582002376         -0.0128884178980405        0.000453225640814314       1.13904880338633         0.122523751207596         -0.116448731986259        0.00974099211112658        -3.94041266194955       0.00989712703718198      0.127127141054346         -0.00818841672354807       2.29741042856605       -0.20748957690224         -0.0106722188786461       0.000109102800775492       -0.431553276544808      0.066547014196589         -0.00608771654680961       0.000518295539478288            0.3244  0.4100  0.52282    0.53000 0.40000 0.40000 5   7   16  36
 10         -5.22076099376969      -1.23900957805002       1.7752748976784          -0.58631759135787          0.0995277529016549        -0.0086016006724535        0.000293483860485304       2.70286309864854         -0.952586915768218        0.0974738878185804        -0.00333130916422102       -5.94603095036781       1.43751971445192         -0.160491201877887        0.00947392815453608        3.32198656195457       -0.950282566950248        0.139425152495734         -0.00909394342526459       -0.610236415803407      0.196754717126982         -0.0323835824944728        0.00212760384684684             0.3293  0.4100  0.52588    0.53000 0.40000 0.40000 5   7   16  36
 """)
+
+
 class EdwardsFah2013Foreland20MPa(EdwardsFah2013Foreland60MPa):
-   COEFFS = CoeffsTable(sa_damping=5, table="""\
+    COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT        a1                     a2                      a3                      a4                      a5                       a6                        a7                         a8                       a9                       a10                       a11                        a12                     a13                      a14                       a15                        a16                    a17                      a18                       a19                        a20                      a21                       a22                       a23                             tau    phi_SS  sigma_tot  phi_11  phi_21  C2      Mc1 Mc2 Rc11 Rc21
 pgv        -5.98828131155829      4.22469803134838        -2.04120191203769       0.711900097679621       -0.134707909947453       0.0124643591916466        -0.000446133011460594      0.630842790775833        -0.0928130260632013      -0.0234695312288233       0.00237307994631626        -2.25270036839014       -0.586289153227759       0.202879758774249         -0.0116107156904395        1.12087240865561       0.443071405843821        -0.137998604186644        0.00818930883574762        -0.211714156943433       -0.0829839987851407       0.026367887527244         -0.00164429058370831            0.5010  0.4600  0.68015    0.00000 0.00000 0.00000 5   7   16  36
 pga        -3.57341468559359      3.89406666605519        -1.9910815291063        0.713864870869433       -0.137633907435241       0.0128860596514615        -0.000465319011030701      0.733374338472405        -0.2677335171402         0.0215002442160946        -0.000820469906954345      -2.38580467000541       -0.410061286858664       0.162211794259492         -0.00898095055760459       1.19263829294972       0.34958518594612         -0.119460706718737        0.00716101400712219        -0.242827667755347       -0.0587703943125401       0.0219147348475217        -0.00141343332876649            0.3532  0.4600  0.57998    0.58000 0.47000 0.35000 5   7   16  36
@@ -264,8 +268,10 @@ pga        -3.57341468559359      3.89406666605519        -1.9910815291063      
 10         -5.83527455595751      0.0315464379234589      0.863133908189103       -0.26286289262433       0.0394612819186106       -0.00301217529196601      8.86282614046283e-05       0.846352357953211        0.125633253870989        -0.0992631150260203       0.00810480158349865        -3.12581664737427       -0.301683046315996       0.172320142929305         -0.0106273085763232        1.84569215436564       -0.0146718168019165      -0.0448478537605027       0.00232338769077233        -0.352419559663795       0.0307216734684378        0.000902995519959268      3.29773028069473e-05            0.3293  0.4100  0.52588    0.53000 0.40000 0.40000 5   7   16  36
 
 """)
+
+
 class EdwardsFah2013Foreland30MPa(EdwardsFah2013Foreland60MPa):
-   COEFFS = CoeffsTable(sa_damping=5, table="""\
+    COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT     a1                  a2                  a3                  a4                  a5                  a6                      a7                      a8                      a9                  a10                 a11                     a12                 a13                 a14                     a15                     a16                 a17                     a18                     a19                     a20                 a21                     a22                     a23                          tau    phi_SS  sigma_tot  phi_11  phi_21  C2      Mc1 Mc2 Rc11 Rc21
 pgv     -6.60836235126132   4.84694009472205    -2.39084226280178   0.835493674863462   -0.158208778581342  0.0146540216411737      -0.000524856695766496   1.92813086913898        -0.846893255125564  0.115051313509965   -0.00574471498317203    -3.78047016610218   0.307370266479717   0.0358406913156406      -0.00162299576607241    1.87440812486284    -0.000858521915720337   -0.0544302370699523     0.00315378427875909     -0.339619026381192  -0.0072494828549807     0.0120355556800168      -0.000775824833908316        0.5010  0.4600  0.68015    0.00000 0.00000 0.00000 5   7   16  36
 pga     -4.26773876283286   4.66062276191853    -2.44992803379178   0.878819709238118   -0.169159826546462  0.0158421562150212      -0.000572599707089873   1.73983347947757        -0.836947798376102  0.124208975427573   -0.00676353729165467    -3.45900810523565   0.186976080204287   0.053881438747656       -0.00262167989008315    1.68253011351636    0.0805181136773349      -0.0709825650070436     0.00431840314963412     -0.319781003851133  -0.0172479353549835     0.0145245685626244      -0.000982657689383878        0.3532  0.4600  0.57998    0.58000 0.47000 0.35000 5   7   16  36
@@ -323,8 +329,10 @@ pga     -4.26773876283286   4.66062276191853    -2.44992803379178   0.8788197092
 8.00    -5.98536991284128   0.23075492450654    0.81627427629354    -0.256018593253181  0.0392576350800975  -0.00309110725256368    9.50507077009833e-05    1.36865888172568        -0.0321731675617039 -0.084335561452936  0.00767209803241737     -3.53821884330828   -0.298200396624397  0.192378418892592       -0.0123616529581177     2.01915586775386    0.0142324443090848      -0.0611596092179959     0.00355655494888518     -0.380505431429783  0.0244940206130155      0.00392959132396138     -0.000190373279017243        0.3244  0.4100  0.52282    0.53000 0.40000 0.40000 5   7   16  36
 10.0    -6.43166037718965   0.781715417336081   0.419067880454194   -0.111703048232771  0.0111834875674998  -0.000347547879850276   -9.58880388830187e-06   1.39969757465226        -0.244919016206169  -0.0251821119076448 0.00351030447501622     -3.63841700023342   0.0319436321583016  0.106164012425708       -0.00652157603960815    2.09161717274124    -0.169762357847494      -0.0153647877577974     0.000563014058030854    -0.396033090352291  0.0577917572882087      -0.00409638232458104    0.000322671994810415         0.3293  0.4100  0.52588    0.53000 0.40000 0.40000 5   7   16  36
 """)
+
+
 class EdwardsFah2013Foreland50MPa(EdwardsFah2013Foreland60MPa):
-   COEFFS = CoeffsTable(sa_damping=5, table="""\
+    COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT     a1                  a2                  a3                  a4                  a5                  a6                      a7                      a8                      a9                  a10                     a11                     a12                 a13                 a14                     a15                     a16                 a17                 a18                     a19                     a20                 a21                     a22                     a23                          tau    phi_SS  sigma_tot  phi_11  phi_21  C2      Mc1 Mc2 Rc11 Rc21
 pgv     -7.07692104560858   5.53453557159042    -2.85638253778918   1.00455096336982    -0.189766212430622  0.0175339379429905      -0.000626946378448282   1.81360194718373        -0.789495658576955  0.10664113201381        -0.00537702655581446    -3.40075366709673   0.0695084444372301  0.0787711312860849      -0.00400441422151852    1.63540808826056    0.155336375482169   -0.0839712344789103     0.00486580061157626     -0.291743467951392  -0.0391738553207627     0.0182003147413057      -0.00113992749901153         0.5010  0.4600  0.68015    0.00000 0.00000 0.00000 5   7   16  36
 pga     -4.04537660224925   4.54792449211361    -2.52312602512793   0.947393883303524   -0.186633142737737  0.0177041231939612      -0.000645125482634016   0.567936855195552       -0.159096356116191  0.00189062729435474     0.000246448178818437    -1.67722490671008   -0.895375073520955  0.255212398467628       -0.0144070079256093     0.715702210915304   0.682852678952893   -0.185408762439109      0.0111290504165921      -0.142521524189518  -0.129561201230503      0.0361572032396897      -0.00228425426985864         0.3532  0.4600  0.57998    0.58000 0.47000 0.35000 5   7   16  36
@@ -382,8 +390,10 @@ pga     -4.04537660224925   4.54792449211361    -2.52312602512793   0.9473938833
 8       -6.29618436773334   0.593576235293328   0.579279030255573   -0.159949119182875  0.0187078666431546  -0.000966748084588227   1.15109217475502e-05    1.52680097661609        -0.141570970727533  -0.0621079232508557     0.00628022287785056     -3.36398830862652   -0.429344312146806  0.220076269805878       -0.0141304450734351     1.86789591416677    0.131624640989186   -0.0874949132717207     0.00533448839482066     -0.349446065958659  -0.000108743133007239   0.00961626900463011     -0.000583721048212146        0.3244  0.4100  0.52282    0.53000 0.40000 0.40000 5   7   16  36
 10      -7.94617073706378   3.05358061930519    -0.96854271695036   0.328701833762793   -0.0641329222023237 0.00621123983538322     -0.000237030434091669   0.852119696321722       0.0960439733951024  -0.0905840253406567     0.00745876905697177     -2.46581768172236   -0.751883096438912  0.263733211281735       -0.0163560022914423     1.39627843374341    0.308820068352249   -0.114561775416081      0.00691668166539836     -0.265745759050759  -0.0332960394074053     0.0151080521904201      -0.000924908549758687        0.3293  0.4100  0.52588    0.53000 0.40000 0.40000 5   7   16  36
    """)
+
+
 class EdwardsFah2013Foreland75MPa(EdwardsFah2013Foreland60MPa):
-   COEFFS = CoeffsTable(sa_damping=5, table="""\
+    COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT     a1                  a2                  a3                  a4                  a5                  a6                      a7                      a8                  a9                  a10                     a11                     a12                 a13                     a14                     a15                     a16                 a17                 a18                     a19                     a20                 a21                     a22                     a23                          tau    phi_SS  sigma_tot  phi_11  phi_21  C2      Mc1 Mc2 Rc11 Rc21
 pgv     -6.57469117091242   4.99953275450203    -2.63630223447654   0.964945468210338   -0.186558236049026  0.0174520362677213      -0.000628362710479202   0.736128035784037   -0.18405076231684   -0.00042944959645579    0.00066348420610104     -1.8547283707141    -0.840201161811686      0.244402214776006       -0.0135418482823542     0.823870328769334   0.644330715358799   -0.174753020261893      0.0101735495940055      -0.147006060895269  -0.12774355277971       0.0348389980606951      -0.00212152529378195         0.5010  0.4600  0.68015    0.00000 0.00000 0.00000 5   7   16  36
 pga     -5.05332584690767   5.79901385618117    -3.26108447540141   1.19210621748764    -0.230359980632197  0.021619901601699       -0.000782956443637468   1.51940367002587    -0.720027011149298  0.106344661381523       -0.00594637999032869    -2.77260459099821   -0.24536021612361       0.131284092376549       -0.00685788526516533    1.24467365974551    0.367784426871266   -0.124915752970536      0.00740894059934724     -0.229179987928886  -0.0780429527375448     0.0262393564636032      -0.00167085432058654         0.3532  0.4600  0.57998    0.58000 0.47000 0.35000 5   7   16  36
@@ -441,8 +451,10 @@ pga     -5.05332584690767   5.79901385618117    -3.26108447540141   1.1921062174
 8       -8.00971555487462   3.05569332576059    -0.8865844093771    0.298062768543727   -0.0589525086907512 0.00576668805611753     -0.000221572905263774   1.74006190178607    -0.287277680307656  -0.0325940714416031     0.00443370746028287     -3.34319851825824   -0.453294254530879      0.225596925537138       -0.014485444391766      1.80033549005251    0.189193675086616   -0.101092396847131      0.00627862446823875     -0.332679578504415  -0.0143447763457875     0.0130506968114372      -0.000826955576192081        0.3244  0.4100  0.52282    0.53000 0.40000 0.40000 5   7   16  36
 10      -8.89616399409441   3.82295484619195    -1.29301720784567   0.426310708719824   -0.0821750892343912 0.0079218185692639      -0.00029977707904657    3.35953773826936    -1.35519982116262   0.173705309306849       -0.00788604346172544    -5.35714826823203   0.920153620376867       -0.0417912639242878     0.00147457931373009     2.78499439720122    -0.494130813960782  0.0316012388426109      -0.00157734304928458    -0.499307111174816  0.101940037398947       -0.00945449770327235    0.000498297268513102         0.3293  0.4100  0.52588    0.53000 0.40000 0.40000 5   7   16  36
    """)
+
+
 class EdwardsFah2013Foreland90MPa(EdwardsFah2013Foreland60MPa):
-   COEFFS = CoeffsTable(sa_damping=5, table="""\
+    COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT     a1                  a2                  a3                  a4                  a5                  a6                      a7                      a8                  a9                  a10                     a11                     a12                 a13                 a14                 a15                     a16                 a17                     a18                     a19                     a20                 a21                     a22                 a23                          tau    phi_SS  sigma_tot  phi_11  phi_21  C2      Mc1 Mc2 Rc11 Rc21
 pgv     -7.26876674629289   6.08963385302017    -3.31507446158009   1.17940533292671    -0.222510936489639  0.0205038808145898      -0.000731672729411663   0.290911984537749   0.105040997412745   -0.0569331093714345     0.00410652179670896     -1.14906550623334   -1.30984203506267   0.337662259478034   -0.0192917452757793     0.430675205090011   0.909805698096816       -0.228187792240094      0.0135040442590207      -0.0739460222541126 -0.177497810946461      0.044931025347864   -0.00275442685227546         0.5010  0.4600  0.68015    0.00000 0.00000 0.00000 5   7   16  36
 pga     -5.00310682403581   5.92938822758371    -3.41666915736972   1.25743678305428    -0.243111417503381  0.0228089084146908      -0.000825891003915581   0.491736022411357   -0.120703192634808  -0.00293483626868646    0.000382318681752032    -1.33823717187248   -1.11143719437234   0.293153502096488   -0.0164126015129734     0.489502218123629   0.833005600456351       -0.213307702035917      0.0126953584339756      -0.093970501498063  -0.162486090383482      0.0424573711718931  -0.00264895393066593         0.3532  0.4600  0.57998    0.58000 0.47000 0.35000 5   7   16  36
@@ -500,8 +512,10 @@ pga     -5.00310682403581   5.92938822758371    -3.41666915736972   1.2574367830
 8       -8.36112404682273   3.55856048777613    -1.19165163746085   0.396994320950031   -0.0763445287065532 0.00731934629981129     -0.000276462589313594   1.71201536764756    -0.278052661459308  -0.0333659764999204     0.00443822238512465     -3.1691964632426    -0.565123534950947  0.247309866599232   -0.0157995156681267     1.68328734123097    0.269052720482077       -0.117584919033023      0.00733096314073971     -0.309694480512774  -0.03045665360681       0.0164743906214399  -0.00105052454446912         0.3244  0.4100  0.52282    0.53000 0.40000 0.40000 5   7   16  36
 10      -9.17989619745715   4.20221145773307    -1.51629856201014   0.49830440089873    -0.0947967424221091 0.00904074598062506     -0.00033883529314331    3.40367123595467    -1.38456497146438   0.179501143627895       -0.00824080808115213    -5.27536565336961   0.858449863392392   -0.0286624327581027 0.000631169325975492    2.71178387228714    -0.437897146604191      0.0190964707092874      -0.000740423263877386   -0.48351810742625   0.0896778501059212      -0.0066743156842739 0.000309164016148211         0.3293  0.4100  0.52588    0.53000 0.40000 0.40000 5   7   16  36
    """)
+
+
 class EdwardsFah2013Foreland120MPa(EdwardsFah2013Foreland60MPa):
-   COEFFS = CoeffsTable(sa_damping=5, table="""\
+    COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT     a1                  a2                  a3                  a4                      a5                      a6                      a7                      a8                  a9                  a10                 a11                     a12                 a13                 a14                     a15                     a16                 a17                 a18                     a19                     a20                 a21                     a22                     a23                          tau    phi_SS  sigma_tot  phi_11  phi_21  C2      Mc1 Mc2 Rc11 Rc21
 pgv     -7.82108412777637   6.58780944333771    -3.55529537223548   1.25607833984171        -0.236374820444362      0.0217596471124324      -0.000775905888199971   1.61006701452372    -0.672434476960728  0.0871178653427606  -0.00438283969087223    -2.78817933944484   -0.326044784410847  0.151150747929228       -0.00805202716636021    1.25478075912093    0.409068916159769   -0.132172954991963      0.00765609359435457     -0.215263916765026  -0.0909480113722333     0.0282036245109193      -0.00172801293183309         0.5010  0.4600  0.68015    0.00000 0.00000 0.00000 5   7   16  36
 pga     -5.46305601887405   6.37976847368286    -3.6655070637383    1.34567425471441        -0.260015842307388      0.0243971709163212      -0.000883488711581384   1.39604643825301    -0.645934131789525  0.0936279202259357  -0.00528140599504769    -2.43653162527586   -0.462962566585634  0.170774407790943       -0.00903957500733608    1.03378678364698    0.508302850930722   -0.151352791979848      0.00892016187454288     -0.185187685425041  -0.107855746132408      0.0319696806715751      -0.00200528749650398         0.3532  0.4600  0.57998    0.58000 0.47000 0.35000 5   7   16  36
@@ -559,47 +573,49 @@ pga     -5.46305601887405   6.37976847368286    -3.6655070637383    1.3456742547
 8       -8.03243030394125   3.03502289358228    -0.893423741715858  0.317369138988265       -0.0653018037420109     0.00654504617366308     -0.000254475681040024   1.60592187151642    -0.2080135325016    -0.0473590296364213 0.00530711721299164     -2.82006036141049   -0.809331623874063  0.297340057118074       -0.0189476893567513     1.46148072622812    0.428931943257202   -0.151528746369184      0.00953361564357632     -0.267110406632051  -0.0616692865715747     0.0232338869819482      -0.00149638108121167         0.3244  0.4100  0.52282    0.53000 0.40000 0.40000 5   7   16  36
 10      -9.55075544332661   4.68488735297049    -1.79819674847135   0.5896778543221         -0.110896618838083      0.0104697485755357      -0.000388568276808906   3.47288597906148    -1.42960378756977   0.188332387292502   -0.00878103114116427    -5.15288974629765   0.76527289132044    -0.00891343321622578    -0.000628797288646536   2.59902796847329    -0.351074818366381  -0.000150908980048818   0.000542117598010521    -0.458870382435115  0.0705262546171767      -0.00234717674570946    1.60431564598715e-05         0.3293  0.4100  0.52588    0.53000 0.40000 0.40000 5   7   16  36
    """)
-   
+
+
 class EdwardsFah2013Foreland60MPaMR(EdwardsFah2013Foreland60MPa):
 
     """
-    Adjustment of a single station sigma for magnitude and distance dependance 
+    Adjustment of a single station sigma for magnitude and distance dependance
     """
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         adjust the median values to the soil-type used for Swiss Hazard 2013
         Vs30 = 1100m/s
         """
         C = self.COEFFS[imt]
-        C1_rrup =self._compute_C1_term(C,imt, dists)
+        C1_rrup = self._compute_C1_term(C, imt, dists)
         phi_ss_mr = self._compute_phi_ss(C, rup, C1_rrup, imt)
 
-        mean, stddevs = super(EdwardsFah2013Foreland60MPaMR,self).\
-        get_mean_and_stddevs(sites,rup,dists,imt,stddev_types)
-        std_corr = self._get_corr_stddevs(self.COEFFS[imt], stddev_types,len(sites.vs30),phi_ss_mr)
-    
+        mean, stddevs = super(EdwardsFah2013Foreland60MPaMR, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        std_corr = self._get_corr_stddevs(
+            self.COEFFS[imt], stddev_types, len(sites.vs30), phi_ss_mr)
+
         stddevs = np.array(std_corr)
         return mean, stddevs
 
-    def _compute_C1_term( self, C, imt,dists ):
+    def _compute_C1_term(self, C, imt, dists):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
         """
-        C1_rrup =0.0
-        
-        if dists.rrup < C['Rc11']:
+        C1_rrup = 0.0
+
+        if (dists.rrup < C['Rc11']).any():
             C1_rrup = C['phi_11']
-            #~ print 'case01 rrup< ', C1_rrup
-        elif dists.rrup >= C['Rc11'] and dists.rrup <= C['Rc21']:
-            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
-            #~ print 'case02 rrup> < ', C1_rrup
-        elif dists.rrup > C['Rc21']:
+        elif ((dists.rrup >= C['Rc11']).any()
+                and (dists.rrup <= C['Rc21']).any()):
+            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * \
+                ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
+        elif (dists.rrup > C['Rc21']).any():
             C1_rrup = C['phi_21']
-            #~ print 'case03 rrup> ', C1_rrup
         return C1_rrup
 
-    def _compute_phi_ss( self, C, rup, C1_rrup ,imt):
+    def _compute_phi_ss(self, C, rup, C1_rrup, imt):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
@@ -609,69 +625,71 @@ class EdwardsFah2013Foreland60MPaMR(EdwardsFah2013Foreland60MPa):
 
         if rup.mag < C['Mc1']:
             phi_ss = C1_rrup
-            #~ print phi_ss
 
         elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
-            phi_ss = C1_rrup + (C['C2'] - C1_rrup) * ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
-            #~ print phi_ss
+            phi_ss = C1_rrup + \
+                (C['C2'] - C1_rrup) * \
+                ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
 
         elif rup.mag > C['Mc2']:
             phi_ss = C['C2']
-            #~ print phi_ss
-        return phi_ss 
+        return phi_ss
 
-    def _get_corr_stddevs( self, C, stddev_types, num_sites, phi_ss):
+    def _get_corr_stddevs(self, C, stddev_types, num_sites, phi_ss):
         """
         Return standard deviations adjusted for single station sigma
         as proposed to be used in the new Swiss Hazard Model [2014].
         """
         stddevs = []
-        #~ print 'tau:',C['tau'], 'phis_ss-->', phi_ss
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(C['tau']**2 + phi_ss**2) + np.zeros(num_sites))
+                stddevs.append(
+                    np.sqrt(C['tau'] ** 2 + phi_ss ** 2) + np.zeros(num_sites))
         return stddevs
+
 
 class EdwardsFah2013Foreland10MPaMR(EdwardsFah2013Foreland10MPa):
+
     """
-    Adjustment of a single station sigma for magnitude and distance dependance 
+    Adjustment of a single station sigma for magnitude and distance dependance
     """
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         adjust the median values to the soil-type used for Swiss Hazard 2013
         Vs30 = 1100m/s
         """
         C = self.COEFFS[imt]
-        C1_rrup =self._compute_C1_term(C,imt, dists)
+        C1_rrup = self._compute_C1_term(C, imt, dists)
         phi_ss_mr = self._compute_phi_ss(C, rup, C1_rrup, imt)
 
-        mean, stddevs = super(EdwardsFah2013Foreland10MPaMR,self).\
-        get_mean_and_stddevs(sites,rup,dists,imt,stddev_types)
-        std_corr = self._get_corr_stddevs(self.COEFFS[imt], stddev_types,len(sites.vs30),phi_ss_mr)
-    
+        mean, stddevs = super(EdwardsFah2013Foreland10MPaMR, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        std_corr = self._get_corr_stddevs(
+            self.COEFFS[imt], stddev_types, len(sites.vs30), phi_ss_mr)
+
         stddevs = np.array(std_corr)
         return mean, stddevs
 
-    def _compute_C1_term( self, C, imt,dists ):
+    def _compute_C1_term(self, C, imt, dists):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
         """
-        C1_rrup =0.0
-        
-        if dists.rrup < C['Rc11']:
+        C1_rrup = 0.0
+
+        if (dists.rrup < C['Rc11']).any():
             C1_rrup = C['phi_11']
-            #~ print 'case01 rrup< ', C1_rrup
-        elif dists.rrup >= C['Rc11'] and dists.rrup <= C['Rc21']:
-            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
-            #~ print 'case02 rrup> < ', C1_rrup
-        elif dists.rrup > C['Rc21']:
+        elif ((dists.rrup >= C['Rc11']).any()
+                and (dists.rrup <= C['Rc21']).any()):
+            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * \
+                ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
+        elif (dists.rrup > C['Rc21']).any():
             C1_rrup = C['phi_21']
-            #~ print 'case03 rrup> ', C1_rrup
         return C1_rrup
 
-    def _compute_phi_ss( self, C, rup, C1_rrup ,imt):
+    def _compute_phi_ss(self, C, rup, C1_rrup, imt):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
@@ -681,71 +699,71 @@ class EdwardsFah2013Foreland10MPaMR(EdwardsFah2013Foreland10MPa):
 
         if rup.mag < C['Mc1']:
             phi_ss = C1_rrup
-            #~ print phi_ss
 
         elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
-            phi_ss = C1_rrup + (C['C2'] - C1_rrup) * ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
-            #~ print phi_ss
+            phi_ss = C1_rrup + \
+                (C['C2'] - C1_rrup) * \
+                ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
 
         elif rup.mag > C['Mc2']:
             phi_ss = C['C2']
-            #~ print phi_ss
-        return phi_ss 
+        return phi_ss
 
-    def _get_corr_stddevs( self, C, stddev_types, num_sites, phi_ss):
+    def _get_corr_stddevs(self, C, stddev_types, num_sites, phi_ss):
         """
         Return standard deviations adjusted for single station sigma
         as proposed to be used in the new Swiss Hazard Model [2014].
         """
         stddevs = []
-        #~ print 'tau:',C['tau'], 'phis_ss-->', phi_ss
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(C['tau']**2 + phi_ss**2) + np.zeros(num_sites))
+                stddevs.append(
+                    np.sqrt(C['tau'] ** 2 + phi_ss ** 2) + np.zeros(num_sites))
         return stddevs
+
 
 class EdwardsFah2013Foreland20MPaMR(EdwardsFah2013Foreland20MPa):
 
     """
-    Adjustment of a single station sigma for magnitude and distance dependance 
+    Adjustment of a single station sigma for magnitude and distance dependance
     """
-    
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         adjust the median values to the soil-type used for Swiss Hazard 2013
         Vs30 = 1100m/s
         """
         C = self.COEFFS[imt]
-        C1_rrup =self._compute_C1_term(C,imt, dists)
+        C1_rrup = self._compute_C1_term(C, imt, dists)
         phi_ss_mr = self._compute_phi_ss(C, rup, C1_rrup, imt)
 
-        mean, stddevs = super(EdwardsFah2013Foreland20MPaMR,self).\
-        get_mean_and_stddevs(sites,rup,dists,imt,stddev_types)
-        std_corr = self._get_corr_stddevs(self.COEFFS[imt], stddev_types,len(sites.vs30),phi_ss_mr)
-    
+        mean, stddevs = super(EdwardsFah2013Foreland20MPaMR, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        std_corr = self._get_corr_stddevs(
+            self.COEFFS[imt], stddev_types, len(sites.vs30), phi_ss_mr)
+
         stddevs = np.array(std_corr)
         return mean, stddevs
 
-    def _compute_C1_term( self, C, imt,dists ):
+    def _compute_C1_term(self, C, imt, dists):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
         """
-        C1_rrup =0.0
-        
-        if dists.rrup < C['Rc11']:
+        C1_rrup = 0.0
+
+        if (dists.rrup < C['Rc11']).any():
             C1_rrup = C['phi_11']
-            #~ print 'case01 rrup< ', C1_rrup
-        elif dists.rrup >= C['Rc11'] and dists.rrup <= C['Rc21']:
-            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
-            #~ print 'case02 rrup> < ', C1_rrup
+        elif ((dists.rrup >= C['Rc11']).any()
+                and (dists.rrup <= C['Rc21']).any()):
+            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * \
+                ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
         elif dists.rrup > C['Rc21']:
             C1_rrup = C['phi_21']
-            #~ print 'case03 rrup> ', C1_rrup
         return C1_rrup
 
-    def _compute_phi_ss( self, C, rup, C1_rrup ,imt):
+    def _compute_phi_ss(self, C, rup, C1_rrup, imt):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
@@ -755,70 +773,71 @@ class EdwardsFah2013Foreland20MPaMR(EdwardsFah2013Foreland20MPa):
 
         if rup.mag < C['Mc1']:
             phi_ss = C1_rrup
-            #~ print phi_ss
 
         elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
-            phi_ss = C1_rrup + (C['C2'] - C1_rrup) * ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
-            #~ print phi_ss
+            phi_ss = C1_rrup + \
+                (C['C2'] - C1_rrup) * \
+                ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
 
         elif rup.mag > C['Mc2']:
             phi_ss = C['C2']
-            #~ print phi_ss
-        return phi_ss 
+        return phi_ss
 
-    def _get_corr_stddevs( self, C, stddev_types, num_sites, phi_ss):
+    def _get_corr_stddevs(self, C, stddev_types, num_sites, phi_ss):
         """
         Return standard deviations adjusted for single station sigma
         as proposed to be used in the new Swiss Hazard Model [2014].
         """
         stddevs = []
-        #~ print 'tau:',C['tau'], 'phis_ss-->', phi_ss
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(C['tau']**2 + phi_ss**2) + np.zeros(num_sites))
+                stddevs.append(
+                    np.sqrt(C['tau'] ** 2 + phi_ss ** 2) + np.zeros(num_sites))
         return stddevs
+
 
 class EdwardsFah2013Foreland30MPaMR(EdwardsFah2013Foreland30MPa):
 
     """
-    Adjustment of a single station sigma for magnitude and distance dependance 
+    Adjustment of a single station sigma for magnitude and distance dependance
     """
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         adjust the median values to the soil-type used for Swiss Hazard 2013
         Vs30 = 1100m/s
         """
         C = self.COEFFS[imt]
-        C1_rrup =self._compute_C1_term(C,imt, dists)
+        C1_rrup = self._compute_C1_term(C, imt, dists)
         phi_ss_mr = self._compute_phi_ss(C, rup, C1_rrup, imt)
 
-        mean, stddevs = super(EdwardsFah2013Foreland30MPaMR,self).\
-        get_mean_and_stddevs(sites,rup,dists,imt,stddev_types)
-        std_corr = self._get_corr_stddevs(self.COEFFS[imt], stddev_types,len(sites.vs30),phi_ss_mr)
-    
+        mean, stddevs = super(EdwardsFah2013Foreland30MPaMR, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        std_corr = self._get_corr_stddevs(
+            self.COEFFS[imt], stddev_types, len(sites.vs30), phi_ss_mr)
+
         stddevs = np.array(std_corr)
         return mean, stddevs
 
-    def _compute_C1_term( self, C, imt,dists ):
+    def _compute_C1_term(self, C, imt, dists):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
         """
-        C1_rrup =0.0
-        
-        if dists.rrup < C['Rc11']:
+        C1_rrup = 0.0
+
+        if (dists.rrup < C['Rc11']).any():
             C1_rrup = C['phi_11']
-            #~ print 'case01 rrup< ', C1_rrup
-        elif dists.rrup >= C['Rc11'] and dists.rrup <= C['Rc21']:
-            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
-            #~ print 'case02 rrup> < ', C1_rrup
-        elif dists.rrup > C['Rc21']:
+        elif ((dists.rrup >= C['Rc11']).any()
+                and (dists.rrup <= C['Rc21']).any()):
+            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * \
+                ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
+        elif (dists.rrup > C['Rc21']).any():
             C1_rrup = C['phi_21']
-            #~ print 'case03 rrup> ', C1_rrup
         return C1_rrup
 
-    def _compute_phi_ss( self, C, rup, C1_rrup ,imt):
+    def _compute_phi_ss(self, C, rup, C1_rrup, imt):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
@@ -828,70 +847,71 @@ class EdwardsFah2013Foreland30MPaMR(EdwardsFah2013Foreland30MPa):
 
         if rup.mag < C['Mc1']:
             phi_ss = C1_rrup
-            #~ print phi_ss
 
         elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
-            phi_ss = C1_rrup + (C['C2'] - C1_rrup) * ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
-            #~ print phi_ss
+            phi_ss = C1_rrup + \
+                (C['C2'] - C1_rrup) * \
+                ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
 
         elif rup.mag > C['Mc2']:
             phi_ss = C['C2']
-            #~ print phi_ss
-        return phi_ss 
+        return phi_ss
 
-    def _get_corr_stddevs( self, C, stddev_types, num_sites, phi_ss):
+    def _get_corr_stddevs(self, C, stddev_types, num_sites, phi_ss):
         """
         Return standard deviations adjusted for single station sigma
         as proposed to be used in the new Swiss Hazard Model [2014].
         """
         stddevs = []
-        #~ print 'tau:',C['tau'], 'phis_ss-->', phi_ss
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(C['tau']**2 + phi_ss**2) + np.zeros(num_sites))
+                stddevs.append(
+                    np.sqrt(C['tau'] ** 2 + phi_ss ** 2) + np.zeros(num_sites))
         return stddevs
+
 
 class EdwardsFah2013Foreland50MPaMR(EdwardsFah2013Foreland50MPa):
 
     """
-    Adjustment of a single station sigma for magnitude and distance dependance 
+    Adjustment of a single station sigma for magnitude and distance dependance
     """
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         adjust the median values to the soil-type used for Swiss Hazard 2013
         Vs30 = 1100m/s
         """
         C = self.COEFFS[imt]
-        C1_rrup =self._compute_C1_term(C,imt, dists)
+        C1_rrup = self._compute_C1_term(C, imt, dists)
         phi_ss_mr = self._compute_phi_ss(C, rup, C1_rrup, imt)
 
-        mean, stddevs = super(EdwardsFah2013Foreland50MPaMR,self).\
-        get_mean_and_stddevs(sites,rup,dists,imt,stddev_types)
-        std_corr = self._get_corr_stddevs(self.COEFFS[imt], stddev_types,len(sites.vs30),phi_ss_mr)
-    
+        mean, stddevs = super(EdwardsFah2013Foreland50MPaMR, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        std_corr = self._get_corr_stddevs(
+            self.COEFFS[imt], stddev_types, len(sites.vs30), phi_ss_mr)
+
         stddevs = np.array(std_corr)
         return mean, stddevs
 
-    def _compute_C1_term( self, C, imt,dists ):
+    def _compute_C1_term(self, C, imt, dists):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
         """
-        C1_rrup =0.0
-        
-        if dists.rrup < C['Rc11']:
+        C1_rrup = 0.0
+
+        if (dists.rrup < C['Rc11']).any():
             C1_rrup = C['phi_11']
-            #~ print 'case01 rrup< ', C1_rrup
-        elif dists.rrup >= C['Rc11'] and dists.rrup <= C['Rc21']:
-            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
-            #~ print 'case02 rrup> < ', C1_rrup
-        elif dists.rrup > C['Rc21']:
+        elif ((dists.rrup >= C['Rc11']).any()
+                and (dists.rrup <= C['Rc21']).any()):
+            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * \
+                ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
+        elif (dists.rrup > C['Rc21']).any():
             C1_rrup = C['phi_21']
-            #~ print 'case03 rrup> ', C1_rrup
         return C1_rrup
 
-    def _compute_phi_ss( self, C, rup, C1_rrup ,imt):
+    def _compute_phi_ss(self, C, rup, C1_rrup, imt):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
@@ -901,70 +921,71 @@ class EdwardsFah2013Foreland50MPaMR(EdwardsFah2013Foreland50MPa):
 
         if rup.mag < C['Mc1']:
             phi_ss = C1_rrup
-            #~ print phi_ss
 
         elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
-            phi_ss = C1_rrup + (C['C2'] - C1_rrup) * ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
-            #~ print phi_ss
+            phi_ss = C1_rrup + \
+                (C['C2'] - C1_rrup) * \
+                ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
 
         elif rup.mag > C['Mc2']:
             phi_ss = C['C2']
-            #~ print phi_ss
-        return phi_ss 
+        return phi_ss
 
-    def _get_corr_stddevs( self, C, stddev_types, num_sites, phi_ss):
+    def _get_corr_stddevs(self, C, stddev_types, num_sites, phi_ss):
         """
         Return standard deviations adjusted for single station sigma
         as proposed to be used in the new Swiss Hazard Model [2014].
         """
         stddevs = []
-        #~ print 'tau:',C['tau'], 'phis_ss-->', phi_ss
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(C['tau']**2 + phi_ss**2) + np.zeros(num_sites))
+                stddevs.append(
+                    np.sqrt(C['tau'] ** 2 + phi_ss ** 2) + np.zeros(num_sites))
         return stddevs
-        
+
+
 class EdwardsFah2013Foreland75MPaMR(EdwardsFah2013Foreland75MPa):
-    
+
     """
-    Adjustment of a single station sigma for magnitude and distance dependance 
+    Adjustment of a single station sigma for magnitude and distance dependance
     """
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         adjust the median values to the soil-type used for Swiss Hazard 2013
         Vs30 = 1100m/s
         """
         C = self.COEFFS[imt]
-        C1_rrup =self._compute_C1_term(C,imt, dists)
+        C1_rrup = self._compute_C1_term(C, imt, dists)
         phi_ss_mr = self._compute_phi_ss(C, rup, C1_rrup, imt)
 
-        mean, stddevs = super(EdwardsFah2013Foreland75MPaMR,self).\
-        get_mean_and_stddevs(sites,rup,dists,imt,stddev_types)
-        std_corr = self._get_corr_stddevs(self.COEFFS[imt], stddev_types,len(sites.vs30),phi_ss_mr)
-    
+        mean, stddevs = super(EdwardsFah2013Foreland75MPaMR, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        std_corr = self._get_corr_stddevs(
+            self.COEFFS[imt], stddev_types, len(sites.vs30), phi_ss_mr)
+
         stddevs = np.array(std_corr)
         return mean, stddevs
 
-    def _compute_C1_term( self, C, imt,dists ):
+    def _compute_C1_term(self, C, imt, dists):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
         """
-        C1_rrup =0.0
-        
-        if dists.rrup < C['Rc11']:
+        C1_rrup = 0.0
+
+        if (dists.rrup < C['Rc11']).any():
             C1_rrup = C['phi_11']
-            #~ print 'case01 rrup< ', C1_rrup
-        elif dists.rrup >= C['Rc11'] and dists.rrup <= C['Rc21']:
-            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
-            #~ print 'case02 rrup> < ', C1_rrup
-        elif dists.rrup > C['Rc21']:
+        elif ((dists.rrup >= C['Rc11']).any()
+                and (dists.rrup <= C['Rc21']).any()):
+            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * \
+                ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
+        elif (dists.rrup > C['Rc21']).any():
             C1_rrup = C['phi_21']
-            #~ print 'case03 rrup> ', C1_rrup
         return C1_rrup
 
-    def _compute_phi_ss( self, C, rup, C1_rrup ,imt):
+    def _compute_phi_ss(self, C, rup, C1_rrup, imt):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
@@ -974,70 +995,71 @@ class EdwardsFah2013Foreland75MPaMR(EdwardsFah2013Foreland75MPa):
 
         if rup.mag < C['Mc1']:
             phi_ss = C1_rrup
-            #~ print phi_ss
 
         elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
-            phi_ss = C1_rrup + (C['C2'] - C1_rrup) * ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
-            #~ print phi_ss
+            phi_ss = C1_rrup + \
+                (C['C2'] - C1_rrup) * \
+                ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
 
         elif rup.mag > C['Mc2']:
             phi_ss = C['C2']
-            #~ print phi_ss
-        return phi_ss 
+        return phi_ss
 
-    def _get_corr_stddevs( self, C, stddev_types, num_sites, phi_ss):
+    def _get_corr_stddevs(self, C, stddev_types, num_sites, phi_ss):
         """
         Return standard deviations adjusted for single station sigma
         as proposed to be used in the new Swiss Hazard Model [2014].
         """
         stddevs = []
-        #~ print 'tau:',C['tau'], 'phis_ss-->', phi_ss
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(C['tau']**2 + phi_ss**2) + np.zeros(num_sites))
+                stddevs.append(
+                    np.sqrt(C['tau'] ** 2 + phi_ss ** 2) + np.zeros(num_sites))
         return stddevs
-    
+
+
 class EdwardsFah2013Foreland90MPaMR(EdwardsFah2013Foreland90MPa):
 
     """
-    Adjustment of a single station sigma for magnitude and distance dependance 
+    Adjustment of a single station sigma for magnitude and distance dependance
     """
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         adjust the median values to the soil-type used for Swiss Hazard 2013
         Vs30 = 1100m/s
         """
         C = self.COEFFS[imt]
-        C1_rrup =self._compute_C1_term(C,imt, dists)
+        C1_rrup = self._compute_C1_term(C, imt, dists)
         phi_ss_mr = self._compute_phi_ss(C, rup, C1_rrup, imt)
 
-        mean, stddevs = super(EdwardsFah2013Foreland90MPaMR,self).\
-        get_mean_and_stddevs(sites,rup,dists,imt,stddev_types)
-        std_corr = self._get_corr_stddevs(self.COEFFS[imt], stddev_types,len(sites.vs30),phi_ss_mr)
-    
+        mean, stddevs = super(EdwardsFah2013Foreland90MPaMR, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        std_corr = self._get_corr_stddevs(
+            self.COEFFS[imt], stddev_types, len(sites.vs30), phi_ss_mr)
+
         stddevs = np.array(std_corr)
         return mean, stddevs
 
-    def _compute_C1_term( self, C, imt,dists ):
+    def _compute_C1_term(self, C, imt, dists):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
         """
-        C1_rrup =0.0
-        
-        if dists.rrup < C['Rc11']:
+        C1_rrup = 0.0
+
+        if (dists.rrup < C['Rc11']).any():
             C1_rrup = C['phi_11']
-            #~ print 'case01 rrup< ', C1_rrup
-        elif dists.rrup >= C['Rc11'] and dists.rrup <= C['Rc21']:
-            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
-            #~ print 'case02 rrup> < ', C1_rrup
-        elif dists.rrup > C['Rc21']:
+        elif ((dists.rrup >= C['Rc11']).any()
+                and (dists.rrup <= C['Rc21']).any()):
+            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * \
+                ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
+        elif (dists.rrup > C['Rc21']).any():
             C1_rrup = C['phi_21']
-            #~ print 'case03 rrup> ', C1_rrup
         return C1_rrup
 
-    def _compute_phi_ss( self, C, rup, C1_rrup ,imt):
+    def _compute_phi_ss(self, C, rup, C1_rrup, imt):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
@@ -1047,70 +1069,71 @@ class EdwardsFah2013Foreland90MPaMR(EdwardsFah2013Foreland90MPa):
 
         if rup.mag < C['Mc1']:
             phi_ss = C1_rrup
-            #~ print phi_ss
 
         elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
-            phi_ss = C1_rrup + (C['C2'] - C1_rrup) * ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
-            #~ print phi_ss
+            phi_ss = C1_rrup + \
+                (C['C2'] - C1_rrup) * \
+                ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
 
         elif rup.mag > C['Mc2']:
             phi_ss = C['C2']
-            #~ print phi_ss
-        return phi_ss 
+        return phi_ss
 
-    def _get_corr_stddevs( self, C, stddev_types, num_sites, phi_ss):
+    def _get_corr_stddevs(self, C, stddev_types, num_sites, phi_ss):
         """
         Return standard deviations adjusted for single station sigma
         as proposed to be used in the new Swiss Hazard Model [2014].
         """
         stddevs = []
-        #~ print 'tau:',C['tau'], 'phis_ss-->', phi_ss
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(C['tau']**2 + phi_ss**2) + np.zeros(num_sites))
+                stddevs.append(
+                    np.sqrt(C['tau'] ** 2 + phi_ss ** 2) + np.zeros(num_sites))
         return stddevs
+
 
 class EdwardsFah2013Foreland120MPaMR(EdwardsFah2013Foreland120MPa):
 
     """
-    Adjustment of a single station sigma for magnitude and distance dependance 
+    Adjustment of a single station sigma for magnitude and distance dependance
     """
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         adjust the median values to the soil-type used for Swiss Hazard 2013
         Vs30 = 1100m/s
         """
         C = self.COEFFS[imt]
-        C1_rrup =self._compute_C1_term(C,imt, dists)
+        C1_rrup = self._compute_C1_term(C, imt, dists)
         phi_ss_mr = self._compute_phi_ss(C, rup, C1_rrup, imt)
 
-        mean, stddevs = super(EdwardsFah2013Foreland120MPaMR,self).\
-        get_mean_and_stddevs(sites,rup,dists,imt,stddev_types)
-        std_corr = self._get_corr_stddevs(self.COEFFS[imt], stddev_types,len(sites.vs30),phi_ss_mr)
-    
+        mean, stddevs = super(EdwardsFah2013Foreland120MPaMR, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        std_corr = self._get_corr_stddevs(
+            self.COEFFS[imt], stddev_types, len(sites.vs30), phi_ss_mr)
+
         stddevs = np.array(std_corr)
         return mean, stddevs
 
-    def _compute_C1_term( self, C, imt,dists ):
+    def _compute_C1_term(self, C, imt, dists):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
         """
-        C1_rrup =0.0
-        
-        if dists.rrup < C['Rc11']:
+        C1_rrup = 0.0
+
+        if (dists.rrup < C['Rc11']).any():
             C1_rrup = C['phi_11']
-            #~ print 'case01 rrup< ', C1_rrup
-        elif dists.rrup >= C['Rc11'] and dists.rrup <= C['Rc21']:
-            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
-            #~ print 'case02 rrup> < ', C1_rrup
-        elif dists.rrup > C['Rc21']:
+        elif ((dists.rrup >= C['Rc11']).any()
+                and (dists.rrup <= C['Rc21']).any()):
+            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * \
+                ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
+        elif (dists.rrup > C['Rc21']).any():
             C1_rrup = C['phi_21']
-            #~ print 'case03 rrup> ', C1_rrup
         return C1_rrup
 
-    def _compute_phi_ss( self, C, rup, C1_rrup ,imt):
+    def _compute_phi_ss(self, C, rup, C1_rrup, imt):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
@@ -1120,29 +1143,25 @@ class EdwardsFah2013Foreland120MPaMR(EdwardsFah2013Foreland120MPa):
 
         if rup.mag < C['Mc1']:
             phi_ss = C1_rrup
-            #~ print phi_ss
 
         elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
-            phi_ss = C1_rrup + (C['C2'] - C1_rrup) * ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
-            #~ print phi_ss
+            phi_ss = C1_rrup + \
+                (C['C2'] - C1_rrup) * \
+                ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
 
         elif rup.mag > C['Mc2']:
             phi_ss = C['C2']
-            #~ print phi_ss
-        return phi_ss 
+        return phi_ss
 
-    def _get_corr_stddevs( self, C, stddev_types, num_sites, phi_ss):
+    def _get_corr_stddevs(self, C, stddev_types, num_sites, phi_ss):
         """
         Return standard deviations adjusted for single station sigma
         as proposed to be used in the new Swiss Hazard Model [2014].
         """
         stddevs = []
-        #~ print 'tau:',C['tau'], 'phis_ss-->', phi_ss
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(C['tau']**2 + phi_ss**2) + np.zeros(num_sites))
+                stddevs.append(
+                    np.sqrt(C['tau'] ** 2 + phi_ss ** 2) + np.zeros(num_sites))
         return stddevs
-
-
-

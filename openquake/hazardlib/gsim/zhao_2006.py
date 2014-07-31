@@ -29,6 +29,7 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 
 
 class ZhaoEtAl2006Asc(GMPE):
+
     """
     Implements GMPE developed by John X. Zhao et al. and published as
     "Attenuation Relations of Strong Ground Motion in Japan Using Site
@@ -222,6 +223,7 @@ class ZhaoEtAl2006Asc(GMPE):
 
 
 class ZhaoEtAl2006SInter(ZhaoEtAl2006Asc):
+
     """
     Implements GMPE developed by John X. Zhao et al and published as
     "Attenuation Relations of Strong Ground Motion in Japan Using Site
@@ -302,6 +304,7 @@ class ZhaoEtAl2006SInter(ZhaoEtAl2006Asc):
 
 
 class ZhaoEtAl2006SSlab(ZhaoEtAl2006Asc):
+
     """
     Implements GMPE developed by John X. Zhao et al and published as
     "Attenuation Relations of Strong Ground Motion in Japan Using Site
@@ -393,97 +396,113 @@ class ZhaoEtAl2006SSlab(ZhaoEtAl2006Asc):
         4.00   0.561 -0.169   0.0083 -0.0065   0.0150  0.281
         5.00   0.225 -0.120  -0.0117  0.0246  -0.0268  0.296
         """)
+
+
 class ZhaoEtAl2006AscSWISS05(ZhaoEtAl2006Asc):
+
     """
     --------------------------------------------------------------------
     This class implments an extension of the ZhaoEtAl (2006Asc) model,
     adjusted to be used for the new Swiss Hazard Model [2014].
     1) kappa value
-       K-adjustments corresponding to model 05 (lower model) - as prepared by Ben Edwards 
+       K-adjustments corresponding to model 05 (lower model) - as prepared by Ben Edwards
        K-value for PGA were not provided but infered from SA[]0.01s]
        the model considers a fixed value of vs30=1100m/s
     2) small-magnitude correction
     3) single station sigma - mean inter-event adjustment
     4) single station sigma - inter-event magnitude/distance dependent
     ------------------------------------------------------------------------
-    Disclaimer: these equations are modified to be used for the 
-    new Swiss Seismic Hazard Model [2014]. 
+    Disclaimer: these equations are modified to be used for the
+    new Swiss Seismic Hazard Model [2014].
     The use of these models is the soly responsability of the hazard modeler.
     --------------------------------------------------------------------
-    Model implmented by laurentiu.danciu@sed.ethz.ch 
+    Model implmented by laurentiu.danciu@sed.ethz.ch
     --------------------------------------------------------------------
     """
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-           
-           C_ADJ = self.COEFFS_FS_ROCK[imt]
-           C1_rrup =self._compute_C1_term(C_ADJ,imt, dists)
-           phi_ss = self._compute_phi_ss(C_ADJ, rup, C1_rrup, imt)
-        
-           mean, stddevs = super(ZhaoEtAl2006AscSWISS05,self).\
-           get_mean_and_stddevs(sites,rup,dists,imt,stddev_types)
-           
-           
-           #: apply k-correction corresponding to the lower model [01]
-           mean_corr =  np.exp(mean) * C_ADJ['k_adj'] * self._compute_small_mag_correction_term(C_ADJ, rup.mag, dists.rrup)
-           mean = np.log(mean_corr)
-           
-           std_corr = self._get_corr_stddevs(self.COEFFS_ASC[imt], stddev_types,len(sites.vs30),phi_ss)
-           stddevs = np.array( std_corr )
- 
-           return mean, stddevs
-    def _get_corr_stddevs( self, C, stddev_types, num_sites,phi_ss):
-           """
-           Return standard deviations adjusted for single station sigma
-           as proposed to be used in the new Swiss Hazard Model [2014].
-           """
-           stddevs = []
-           for stddev_type in stddev_types:
-               assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-               if stddev_type == const.StdDev.TOTAL:
-                   stddevs.append( np.sqrt( C['tauC'] **2 + phi_ss*phi_ss) + np.zeros( num_sites ) )
-               elif stddev_type == const.StdDev.INTRA_EVENT:
-                   stddevs.append( C['sigma'] + np.zeros( num_sites ) )
-               elif stddev_type == const.StdDev.INTER_EVENT:
-                   stddevs.append( C['tauC'] + np.zeros( num_sites ) )
-           return stddevs
 
-    def _compute_small_mag_correction_term(self,C,mag,rrup):
-           if mag >= 3.00 and mag < 5.5:
-            return 1 / np.exp(((5.50-mag)/C['a1'])**C['a2']*(C['b1'] + C['b2'] * np.log(np.maximum(np.minimum(rrup, C['Rm']), 10)/20)))
-           elif mag >= 5.50:
+        C_ADJ = self.COEFFS_FS_ROCK[imt]
+        C1_rrup = self._compute_C1_term(C_ADJ, imt, dists)
+        phi_ss = self._compute_phi_ss(C_ADJ, rup, C1_rrup, imt)
+
+        mean, stddevs = super(ZhaoEtAl2006AscSWISS05, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+
+        #: apply k-correction corresponding to the lower model [01]
+        mean_corr = np.exp(
+            mean) * C_ADJ['k_adj'] * self._compute_small_mag_correction_term(C_ADJ, rup.mag, dists.rrup)
+        mean = np.log(mean_corr)
+
+        std_corr = self._get_corr_stddevs(
+            self.COEFFS_ASC[imt], stddev_types, len(sites.vs30), phi_ss)
+        stddevs = np.array(std_corr)
+
+        return mean, stddevs
+
+    def _get_corr_stddevs(self, C, stddev_types, num_sites, phi_ss):
+        """
+        Return standard deviations adjusted for single station sigma
+        as proposed to be used in the new Swiss Hazard Model [2014].
+        """
+        stddevs = []
+        for stddev_type in stddev_types:
+            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+            if stddev_type == const.StdDev.TOTAL:
+                stddevs.append(
+                    np.sqrt(
+                        C['tauC'] ** 2 +
+                        phi_ss *
+                        phi_ss) +
+                    np.zeros(num_sites))
+            elif stddev_type == const.StdDev.INTRA_EVENT:
+                stddevs.append(C['sigma'] + np.zeros(num_sites))
+            elif stddev_type == const.StdDev.INTER_EVENT:
+                stddevs.append(C['tauC'] + np.zeros(num_sites))
+        return stddevs
+
+    def _compute_small_mag_correction_term(self, C, mag, rrup):
+        if mag >= 3.00 and mag < 5.5:
+            return 1 / np.exp(((5.50 - mag) / C['a1']) ** C['a2'] * (
+                C['b1'] + C['b2'] * np.log(np.maximum(np.minimum(rrup, C['Rm']), 10) / 20)))
+        elif mag >= 5.50:
             return 1
-           else:
+        else:
             return 1
 
-    def _compute_C1_term( self, C, imt,dists ):
-           """
-           Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
-           The C1 coeff are used to compute the single station sigma
-           """
-           C1_rrup =0.0
-           if dists.rrup < C['Rc11']:
+    def _compute_C1_term(self, C, imt, dists):
+        """
+        Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
+        The C1 coeff are used to compute the single station sigma
+        """
+        C1_rrup = 0.0
+        if (dists.rrup < C['Rc11']).any():
             C1_rrup = C['phi_11']
-           elif dists.rrup >= C['Rc11'] and dists.rrup <= C['Rc21']:
-            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
-           elif dists.rrup > C['Rc21']:
+        elif ((dists.rrup >= C['Rc11']).any()
+              and (dists.rrup <= C['Rc21']).any()):
+            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * \
+                ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
+        elif (dists.rrup > C['Rc21']).any():
             C1_rrup = C['phi_21']
-           return C1_rrup
-       
-    def _compute_phi_ss( self, C, rup, C1_rrup ,imt):
-           """
-           Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
-           The C1 coeff are used to compute the single station sigma
-           """
-           phi_ss = 0
+        return C1_rrup
 
-           if rup.mag < C['Mc1']:
+    def _compute_phi_ss(self, C, rup, C1_rrup, imt):
+        """
+        Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
+        The C1 coeff are used to compute the single station sigma
+        """
+        phi_ss = 0
+
+        if rup.mag < C['Mc1']:
             phi_ss = C1_rrup
-           elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
-            phi_ss = C1_rrup + (C['C2'] - C1_rrup) * ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
-           elif rup.mag > C['Mc2']:
+        elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
+            phi_ss = C1_rrup + \
+                (C['C2'] - C1_rrup) * \
+                ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
+        elif rup.mag > C['Mc2']:
             phi_ss = C['C2']
-           return phi_ss
-           
+        return phi_ss
+
     COEFFS_FS_ROCK = CoeffsTable(sa_damping=5, table="""\
        IMT    k_adj           a1              a2              b1              b2              Rm             phi_11     phi_21  C2      Mc1     Mc2     Rc11        Rc21
        pga    0.893272000     1.642085E+00    1.833001E+00    1.000000E+00    0.000000E+00    1.000000E+09   0.58000    0.47000 0.35000 5.00000 7.00000 16.00000    36.00000
@@ -508,98 +527,112 @@ class ZhaoEtAl2006AscSWISS05(ZhaoEtAl2006Asc):
        4.00   0.913352473     8.178257E-01    1.000000E+00    1.000000E+00    0.000000E+00    1.000000E+09   0.53000    0.40000 0.40000 5.00000 7.00000 16.00000    36.00000
        5.00   0.912857283     8.178257E-01    1.000000E+00    1.000000E+00    0.000000E+00    1.000000E+09   0.53000    0.40000 0.40000 5.00000 7.00000 16.00000    36.00000
        """)
+
+
 class ZhaoEtAl2006AscSWISS03(ZhaoEtAl2006Asc):
+
     """
     --------------------------------------------------------------------
     This class implments an extension of the ZhaoEtAl (2006Asc) model,
     adjusted to be used for the new Swiss Hazard Model [2014].
     1) kappa value
-       K-adjustments corresponding to model 03(mid model) - as prepared by Ben Edwards 
+       K-adjustments corresponding to model 03(mid model) - as prepared by Ben Edwards
        K-value for PGA were not provided but infered from SA[]0.01s]
        the model considers a fixed value of vs30=1100m/s
     2) small-magnitude correction
     3) single station sigma - mean inter-event adjustment
     4) single station sigma - inter-event magnitude/distance dependent
     ------------------------------------------------------------------------
-    Disclaimer: these equations are modified to be used for the 
-    new Swiss Seismic Hazard Model [2014]. 
+    Disclaimer: these equations are modified to be used for the
+    new Swiss Seismic Hazard Model [2014].
     The use of these models is the soly responsability of the hazard modeler.
     --------------------------------------------------------------------
-    Model implmented by laurentiu.danciu@sed.ethz.ch 
+    Model implmented by laurentiu.danciu@sed.ethz.ch
     --------------------------------------------------------------------
     """
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-           
-           C_ADJ = self.COEFFS_FS_ROCK[imt]
-           C1_rrup =self._compute_C1_term(C_ADJ,imt, dists)
-           phi_ss = self._compute_phi_ss(C_ADJ, rup, C1_rrup, imt)
-        
-           mean, stddevs = super(ZhaoEtAl2006AscSWISS03,self).\
-           get_mean_and_stddevs(sites,rup,dists,imt,stddev_types)
-           
-           
-           #: apply k-correction corresponding to the lower model [01]
-           mean_corr =  np.exp(mean) * C_ADJ['k_adj'] * self._compute_small_mag_correction_term(C_ADJ, rup.mag, dists.rrup)
-           mean = np.log(mean_corr)
-           
-           std_corr = self._get_corr_stddevs(self.COEFFS_ASC[imt], stddev_types,len(sites.vs30),phi_ss)
-           stddevs = np.array( std_corr )
-           
-           return mean, stddevs
-           
-    def _get_corr_stddevs( self, C, stddev_types, num_sites,phi_ss):
-           """
-           Return standard deviations adjusted for single station sigma
-           as proposed to be used in the new Swiss Hazard Model [2014].
-           """
-           stddevs = []
-           for stddev_type in stddev_types:
-               assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-               if stddev_type == const.StdDev.TOTAL:
-                   stddevs.append( np.sqrt( C['tauC'] **2 + phi_ss **2 ) + np.zeros( num_sites ) )
-               elif stddev_type == const.StdDev.INTRA_EVENT:
-                   stddevs.append( C['sigma'] + np.zeros( num_sites ) )
-               elif stddev_type == const.StdDev.INTER_EVENT:
-                   stddevs.append( C['tauC'] + np.zeros( num_sites ) )
-           return stddevs
 
-    def _compute_small_mag_correction_term(self,C,mag,rrup):
-           if mag >= 3.00 and mag < 5.5:
-            return 1 / np.exp(((5.50-mag)/C['a1'])**C['a2']*(C['b1'] + C['b2'] * np.log(np.maximum(np.minimum(rrup, C['Rm']), 10)/20)))
-           elif mag >= 5.50:
+        C_ADJ = self.COEFFS_FS_ROCK[imt]
+        C1_rrup = self._compute_C1_term(C_ADJ, imt, dists)
+        phi_ss = self._compute_phi_ss(C_ADJ, rup, C1_rrup, imt)
+
+        mean, stddevs = super(ZhaoEtAl2006AscSWISS03, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+
+        #: apply k-correction corresponding to the lower model [01]
+        mean_corr = np.exp(
+            mean) * C_ADJ['k_adj'] * self._compute_small_mag_correction_term(C_ADJ, rup.mag, dists.rrup)
+        mean = np.log(mean_corr)
+
+        std_corr = self._get_corr_stddevs(
+            self.COEFFS_ASC[imt], stddev_types, len(sites.vs30), phi_ss)
+        stddevs = np.array(std_corr)
+
+        return mean, stddevs
+
+    def _get_corr_stddevs(self, C, stddev_types, num_sites, phi_ss):
+        """
+        Return standard deviations adjusted for single station sigma
+        as proposed to be used in the new Swiss Hazard Model [2014].
+        """
+        stddevs = []
+        for stddev_type in stddev_types:
+            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+            if stddev_type == const.StdDev.TOTAL:
+                stddevs.append(
+                    np.sqrt(
+                        C['tauC'] ** 2 +
+                        phi_ss ** 2) +
+                    np.zeros(num_sites))
+            elif stddev_type == const.StdDev.INTRA_EVENT:
+                stddevs.append(C['sigma'] + np.zeros(num_sites))
+            elif stddev_type == const.StdDev.INTER_EVENT:
+                stddevs.append(C['tauC'] + np.zeros(num_sites))
+        return stddevs
+
+    def _compute_small_mag_correction_term(self, C, mag, rrup):
+        if mag >= 3.00 and mag < 5.5:
+            return 1 / np.exp(((5.50 - mag) / C['a1']) ** C['a2'] * (
+                C['b1'] + C['b2'] * np.log(np.maximum(np.minimum(rrup, C['Rm']), 10) / 20)))
+        elif mag >= 5.50:
             return 1
-           else:
+        else:
             return 1
 
-    def _compute_C1_term( self, C, imt,dists ):
-           """
-           Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
-           The C1 coeff are used to compute the single station sigma
-           """
-           C1_rrup =0.0
-           if dists.rrup < C['Rc11']:
+    def _compute_C1_term(self, C, imt, dists):
+        """
+        Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
+        The C1 coeff are used to compute the single station sigma
+        """
+        C1_rrup = 0.0
+        if (dists.rrup < C['Rc11']).any():
             C1_rrup = C['phi_11']
-           elif dists.rrup >= C['Rc11'] and dists.rrup <= C['Rc21']:
-            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
-           elif dists.rrup > C['Rc21']:
+        elif ((dists.rrup >= C['Rc11']).any()
+                and (dists.rrup <= C['Rc21']).any()):
+            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * \
+                ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
+        elif (dists.rrup > C['Rc21']).any():
             C1_rrup = C['phi_21']
-           return C1_rrup
-       
-    def _compute_phi_ss( self, C, rup, C1_rrup ,imt):
-           """
-           Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
-           The C1 coeff are used to compute the single station sigma
-           """
-           phi_ss = 0
+        return C1_rrup
 
-           if rup.mag < C['Mc1']:
+    def _compute_phi_ss(self, C, rup, C1_rrup, imt):
+        """
+        Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
+        The C1 coeff are used to compute the single station sigma
+        """
+        phi_ss = 0
+
+        if rup.mag < C['Mc1']:
             phi_ss = C1_rrup
-           elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
-            phi_ss = C1_rrup + (C['C2'] - C1_rrup) * ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
-           elif rup.mag > C['Mc2']:
+        elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
+            phi_ss = C1_rrup + \
+                (C['C2'] - C1_rrup) * \
+                ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
+        elif rup.mag > C['Mc2']:
             phi_ss = C['C2']
-           return phi_ss
-    
+        return phi_ss
+
     COEFFS_FS_ROCK = CoeffsTable(sa_damping=5, table="""\
        IMT    k_adj           a1              a2              b1              b2              Rm              phi_11      phi_21      C2          Mc1    Mc2    Rc11    Rc21
        pga    1.037040000     1.642085E+00    1.833001E+00    1.000000E+00    0.000000E+00    1.000000E+09    0.58        0.47        0.35        5      7      16      36
@@ -624,99 +657,113 @@ class ZhaoEtAl2006AscSWISS03(ZhaoEtAl2006Asc):
        4.00   0.958470267     8.178257E-01    1.000000E+00    1.000000E+00    0.000000E+00    1.000000E+09    0.53        0.4         0.4         5      7      16      36
        5.00   0.943169770     8.178257E-01    1.000000E+00    1.000000E+00    0.000000E+00    1.000000E+09    0.53        0.4         0.4         5      7      16      36
        """)
+
+
 class ZhaoEtAl2006AscSWISS08(ZhaoEtAl2006Asc):
+
     """
     --------------------------------------------------------------------
     This class implments an extension of the ZhaoEtAl (2006Asc) model,
     adjusted to be used for the new Swiss Hazard Model [2014].
     1) kappa value
-       K-adjustments corresponding to model 08(upper model) - as prepared by Ben Edwards 
+       K-adjustments corresponding to model 08(upper model) - as prepared by Ben Edwards
        K-value for PGA were not provided but infered from SA[]0.01s]
        the model considers a fixed value of vs30=1100m/s
     2) small-magnitude correction
     3) single station sigma - mean inter-event adjustment
     4) single station sigma - inter-event magnitude/distance dependent
     ------------------------------------------------------------------------
-    Disclaimer: these equations are modified to be used for the 
-    new Swiss Seismic Hazard Model [2014]. 
+    Disclaimer: these equations are modified to be used for the
+    new Swiss Seismic Hazard Model [2014].
     The use of these models is the soly responsability of the hazard modeler.
     --------------------------------------------------------------------
-    Model implmented by laurentiu.danciu@sed.ethz.ch 
+    Model implmented by laurentiu.danciu@sed.ethz.ch
     --------------------------------------------------------------------
     """
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-           
-           C_ADJ = self.COEFFS_FS_ROCK[imt]
-           C1_rrup =self._compute_C1_term(C_ADJ,imt, dists)
-           phi_ss = self._compute_phi_ss(C_ADJ, rup, C1_rrup, imt)
-        
-           mean, stddevs = super(ZhaoEtAl2006AscSWISS08,self).\
-           get_mean_and_stddevs(sites,rup,dists,imt,stddev_types)
-           
-           
-           #: apply k-correction corresponding to the lower model [01]
-           mean_corr =  np.exp(mean) * C_ADJ['k_adj'] * self._compute_small_mag_correction_term(C_ADJ, rup.mag, dists.rrup)
-           mean = np.log(mean_corr)
-           
-           std_corr = self._get_corr_stddevs(self.COEFFS_ASC[imt], stddev_types,len(sites.vs30),phi_ss)
-           stddevs = np.array( std_corr )
- 
-           stddevs = np.array(stddevs)
-           return mean, stddevs
-           
-    def _get_corr_stddevs( self, C, stddev_types, num_sites,phi_ss):
-           """
-           Return standard deviations adjusted for single station sigma
-           as proposed to be used in the new Swiss Hazard Model [2014].
-           """
-           stddevs = []
-           for stddev_type in stddev_types:
-               assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-               if stddev_type == const.StdDev.TOTAL:
-                   stddevs.append( np.sqrt( C['tauC'] **2 + phi_ss**2 ) + np.zeros( num_sites ) )
-               elif stddev_type == const.StdDev.INTRA_EVENT:
-                   stddevs.append( C['sigma'] + np.zeros( num_sites ) )
-               elif stddev_type == const.StdDev.INTER_EVENT:
-                   stddevs.append( C['tauC'] + np.zeros( num_sites ) )
-           return stddevs
 
-    def _compute_small_mag_correction_term(self,C,mag,rrup):
-           if mag >= 3.00 and mag < 5.5:
-            return 1 / np.exp(((5.50-mag)/C['a1'])**C['a2']*(C['b1'] + C['b2'] * np.log(np.maximum(np.minimum(rrup, C['Rm']), 10)/20)))
-           elif mag >= 5.50:
+        C_ADJ = self.COEFFS_FS_ROCK[imt]
+        C1_rrup = self._compute_C1_term(C_ADJ, imt, dists)
+        phi_ss = self._compute_phi_ss(C_ADJ, rup, C1_rrup, imt)
+
+        mean, stddevs = super(ZhaoEtAl2006AscSWISS08, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+
+        #: apply k-correction corresponding to the lower model [01]
+        mean_corr = np.exp(
+            mean) * C_ADJ['k_adj'] * self._compute_small_mag_correction_term(C_ADJ, rup.mag, dists.rrup)
+        mean = np.log(mean_corr)
+
+        std_corr = self._get_corr_stddevs(
+            self.COEFFS_ASC[imt], stddev_types, len(sites.vs30), phi_ss)
+        stddevs = np.array(std_corr)
+
+        stddevs = np.array(stddevs)
+        return mean, stddevs
+
+    def _get_corr_stddevs(self, C, stddev_types, num_sites, phi_ss):
+        """
+        Return standard deviations adjusted for single station sigma
+        as proposed to be used in the new Swiss Hazard Model [2014].
+        """
+        stddevs = []
+        for stddev_type in stddev_types:
+            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+            if stddev_type == const.StdDev.TOTAL:
+                stddevs.append(
+                    np.sqrt(
+                        C['tauC'] ** 2 +
+                        phi_ss ** 2) +
+                    np.zeros(num_sites))
+            elif stddev_type == const.StdDev.INTRA_EVENT:
+                stddevs.append(C['sigma'] + np.zeros(num_sites))
+            elif stddev_type == const.StdDev.INTER_EVENT:
+                stddevs.append(C['tauC'] + np.zeros(num_sites))
+        return stddevs
+
+    def _compute_small_mag_correction_term(self, C, mag, rrup):
+        if mag >= 3.00 and mag < 5.5:
+            return 1 / np.exp(((5.50 - mag) / C['a1']) ** C['a2'] * (
+                C['b1'] + C['b2'] * np.log(np.maximum(np.minimum(rrup, C['Rm']), 10) / 20)))
+        elif mag >= 5.50:
             return 1
-           else:
+        else:
             return 1
 
-    def _compute_C1_term( self, C, imt,dists ):
-           """
-           Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
-           The C1 coeff are used to compute the single station sigma
-           """
-           C1_rrup =0.0
-           if dists.rrup < C['Rc11']:
+    def _compute_C1_term(self, C, imt, dists):
+        """
+        Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
+        The C1 coeff are used to compute the single station sigma
+        """
+        C1_rrup = 0.0
+        if (dists.rrup < C['Rc11']).any():
             C1_rrup = C['phi_11']
-           elif dists.rrup >= C['Rc11'] and dists.rrup <= C['Rc21']:
-            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
-           elif dists.rrup > C['Rc21']:
+        elif ((dists.rrup >= C['Rc11']).any()
+              and (dists.rrup <= C['Rc21']).any()):
+            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * \
+                ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
+        elif (dists.rrup > C['Rc21']).any():
             C1_rrup = C['phi_21']
-           return C1_rrup
-       
-    def _compute_phi_ss( self, C, rup, C1_rrup ,imt):
-           """
-           Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
-           The C1 coeff are used to compute the single station sigma
-           """
-           phi_ss = 0
+        return C1_rrup
 
-           if rup.mag < C['Mc1']:
+    def _compute_phi_ss(self, C, rup, C1_rrup, imt):
+        """
+        Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
+        The C1 coeff are used to compute the single station sigma
+        """
+        phi_ss = 0
+
+        if rup.mag < C['Mc1']:
             phi_ss = C1_rrup
-           elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
-            phi_ss = C1_rrup + (C['C2'] - C1_rrup) * ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
-           elif rup.mag > C['Mc2']:
+        elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
+            phi_ss = C1_rrup + \
+                (C['C2'] - C1_rrup) * \
+                ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
+        elif rup.mag > C['Mc2']:
             phi_ss = C['C2']
-           return phi_ss
-           
+        return phi_ss
+
     COEFFS_FS_ROCK = CoeffsTable(sa_damping=5, table="""\
        IMT    k_adj           a1              a2              b1              b2              Rm              phi_11      phi_21      C2          Mc1    Mc2    Rc11    Rc21
        pga    1.414560000     1.642085E+00    1.833001E+00    1.000000E+00    0.000000E+00    1.000000E+09    0.58        0.47        0.35        5      7      16      36
@@ -740,14 +787,17 @@ class ZhaoEtAl2006AscSWISS08(ZhaoEtAl2006Asc):
        3.00   0.926223751     8.178257E-01    1.000000E+00    1.000000E+00    0.000000E+00    1.000000E+09    0.53        0.4         0.4         5      7      16      36
        4.00   0.922398917     8.178257E-01    1.000000E+00    1.000000E+00    0.000000E+00    1.000000E+09    0.53        0.4         0.4         5      7      16      36
        5.00   0.919443026     8.178257E-01    1.000000E+00    1.000000E+00    0.000000E+00    1.000000E+09    0.53        0.4         0.4         5      7      16      36
-       """)   
-class ZhaoEtAl2006AscSWISS05T( ZhaoEtAl2006AscSWISS05 ):
+       """)
+
+
+class ZhaoEtAl2006AscSWISS05T(ZhaoEtAl2006AscSWISS05):
+
     """
     --------------------------------------------------------------------
     This class implments an extension of the ZhaoEtAl (2006Asc) model,
     adjusted to be used for the new Swiss Hazard Model [2014].
     1) kappa value
-       K-adjustments corresponding to model 05 (lower model) - as prepared by Ben Edwards 
+       K-adjustments corresponding to model 05 (lower model) - as prepared by Ben Edwards
        K-value for PGA were not provided but infered from SA[]0.01s]
        the model considers a fixed value of vs30=1100m/s
     2) small-magnitude correction
@@ -758,29 +808,33 @@ class ZhaoEtAl2006AscSWISS05T( ZhaoEtAl2006AscSWISS05 ):
     adjustement when computing the single station sigma (reported as total
     standard deviation))
     ------------------------------------------------------------------------
-    Disclaimer: these equations are modified to be used for the 
-    new Swiss Seismic Hazard Model [2014]. 
+    Disclaimer: these equations are modified to be used for the
+    new Swiss Seismic Hazard Model [2014].
     The use of these models is the soly responsability of the hazard modeler.
     --------------------------------------------------------------------
-    Model implmented by laurentiu.danciu@sed.ethz.ch 
+    Model implmented by laurentiu.danciu@sed.ethz.ch
     --------------------------------------------------------------------
     """
 
-    def get_mean_and_stddevs( self, sites, rup, dists, imt, stddev_types ):
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         Adjust the meadian value to the soil-type used for
         Swiss hazard Vs30=1100m/s
         """
         C_ADJ = self.COEFFS_PHI_SS[imt]
 
-        mean, stddevs = super( ZhaoEtAl2006AscSWISS05T, self ).get_mean_and_stddevs( sites, rup, dists, imt,stddev_types )
+        mean, stddevs = super(
+            ZhaoEtAl2006AscSWISS05T, self).get_mean_and_stddevs(
+            sites, rup, dists, imt, stddev_types)
 
-        std_corr = self._get_corr_stddevs(self.COEFFS_ASC[imt], stddev_types,len(sites.vs30),C_ADJ['phi_ss'])
-        stddevs = np.array( std_corr )
+        std_corr = self._get_corr_stddevs(
+            self.COEFFS_ASC[imt], stddev_types, len(
+                sites.vs30), C_ADJ['phi_ss'])
+        stddevs = np.array(std_corr)
 
         return mean, stddevs
 
-    def _get_corr_stddevs( self, C, stddev_types, num_sites,phi_ss):
+    def _get_corr_stddevs(self, C, stddev_types, num_sites, phi_ss):
         """
         Return standard deviations adjusted for single station sigma
         as proposed to be used in the new Swiss Hazard Model [2014].
@@ -789,45 +843,51 @@ class ZhaoEtAl2006AscSWISS05T( ZhaoEtAl2006AscSWISS05 ):
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append( np.sqrt( C['tauC'] **2 + phi_ss**2 ) + np.zeros( num_sites ) )
+                stddevs.append(
+                    np.sqrt(
+                        C['tauC'] ** 2 +
+                        phi_ss ** 2) +
+                    np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append( C['sigma'] + np.zeros( num_sites ) )
+                stddevs.append(C['sigma'] + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append( C['tauC'] + np.zeros( num_sites ) )
+                stddevs.append(C['tauC'] + np.zeros(num_sites))
             return stddevs
 
-
-    COEFFS_PHI_SS = CoeffsTable( sa_damping = 5, table = """\
+    COEFFS_PHI_SS = CoeffsTable(sa_damping=5, table="""\
     IMT     phi_ss
-	pga 	0.460
-	0.050	0.453
-	0.100	0.450
-	0.150	0.468
-	0.200	0.480
-	0.250	0.480
-	0.300	0.480
-	0.400	0.469
-	0.500	0.460
-	0.600	0.457
-	0.700	0.455
-	0.800	0.453
-	0.900	0.452
-	1.000	0.450
-	1.250	0.442
-	1.500	0.435
-	2.000	0.425
-	2.500	0.417
-	3.000	0.410
-	4.000	0.410
-	5.000	0.410
-    """ )
-class ZhaoEtAl2006AscSWISS03T( ZhaoEtAl2006AscSWISS03 ):
+    pga     0.460
+    0.050    0.453
+    0.100    0.450
+    0.150    0.468
+    0.200    0.480
+    0.250    0.480
+    0.300    0.480
+    0.400    0.469
+    0.500    0.460
+    0.600    0.457
+    0.700    0.455
+    0.800    0.453
+    0.900    0.452
+    1.000    0.450
+    1.250    0.442
+    1.500    0.435
+    2.000    0.425
+    2.500    0.417
+    3.000    0.410
+    4.000    0.410
+    5.000    0.410
+    """)
+
+
+class ZhaoEtAl2006AscSWISS03T(ZhaoEtAl2006AscSWISS03):
+
     """
     --------------------------------------------------------------------
     This class implments an extension of the ZhaoEtAl (2006Asc) model,
     adjusted to be used for the new Swiss Hazard Model [2014].
     1) kappa value
-       K-adjustments corresponding to model 03 (mid model) - as prepared by Ben Edwards 
+       K-adjustments corresponding to model 03 (mid model) - as prepared by Ben Edwards
        K-value for PGA were not provided but infered from SA[]0.01s]
        the model considers a fixed value of vs30=1100m/s
     2) small-magnitude correction
@@ -838,28 +898,32 @@ class ZhaoEtAl2006AscSWISS03T( ZhaoEtAl2006AscSWISS03 ):
     adjustement when computing the single station sigma (reported as total
     standard deviation))
     ------------------------------------------------------------------------
-    Disclaimer: these equations are modified to be used for the 
-    new Swiss Seismic Hazard Model [2014]. 
+    Disclaimer: these equations are modified to be used for the
+    new Swiss Seismic Hazard Model [2014].
     The use of these models is the soly responsability of the hazard modeler.
     --------------------------------------------------------------------
-    Model implmented by laurentiu.danciu@sed.ethz.ch 
+    Model implmented by laurentiu.danciu@sed.ethz.ch
     --------------------------------------------------------------------
     """
 
-    def get_mean_and_stddevs( self, sites, rup, dists, imt, stddev_types ):
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         Adjust the meadian value to the soil-type used for
         Swiss hazard Vs30=1100m/s
         """
         C_ADJ = self.COEFFS_PHI_SS[imt]
 
-        mean, stddevs = super( ZhaoEtAl2006AscSWISS03T, self ).get_mean_and_stddevs( sites, rup, dists, imt,stddev_types )
+        mean, stddevs = super(
+            ZhaoEtAl2006AscSWISS03T, self).get_mean_and_stddevs(
+            sites, rup, dists, imt, stddev_types)
 
-        std_corr = self._get_corr_stddevs(self.COEFFS_ASC[imt], stddev_types,len(sites.vs30),C_ADJ['phi_ss'])
-        stddevs = np.array( std_corr )
+        std_corr = self._get_corr_stddevs(
+            self.COEFFS_ASC[imt], stddev_types, len(
+                sites.vs30), C_ADJ['phi_ss'])
+        stddevs = np.array(std_corr)
         return mean, stddevs
 
-    def _get_corr_stddevs( self, C, stddev_types, num_sites,phi_ss):
+    def _get_corr_stddevs(self, C, stddev_types, num_sites, phi_ss):
         """
         Return standard deviations adjusted for single station sigma
         as proposed to be used in the new Swiss Hazard Model [2014].
@@ -868,45 +932,51 @@ class ZhaoEtAl2006AscSWISS03T( ZhaoEtAl2006AscSWISS03 ):
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append( np.sqrt( C['tauC'] **2 + phi_ss**2 ) + np.zeros( num_sites ) )
+                stddevs.append(
+                    np.sqrt(
+                        C['tauC'] ** 2 +
+                        phi_ss ** 2) +
+                    np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append( C['sigma'] + np.zeros( num_sites ) )
+                stddevs.append(C['sigma'] + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append( C['tauC'] + np.zeros( num_sites ) )
+                stddevs.append(C['tauC'] + np.zeros(num_sites))
             return stddevs
 
-
-    COEFFS_PHI_SS = CoeffsTable( sa_damping = 5, table = """\
+    COEFFS_PHI_SS = CoeffsTable(sa_damping=5, table="""\
     IMT     phi_ss
-	pga 	0.460
-	0.050	0.453
-	0.100	0.450
-	0.150	0.468
-	0.200	0.480
-	0.250	0.480
-	0.300	0.480
-	0.400	0.469
-	0.500	0.460
-	0.600	0.457
-	0.700	0.455
-	0.800	0.453
-	0.900	0.452
-	1.000	0.450
-	1.250	0.442
-	1.500	0.435
-	2.000	0.425
-	2.500	0.417
-	3.000	0.410
-	4.000	0.410
-	5.000	0.410
-    """ )
-class ZhaoEtAl2006AscSWISS08T( ZhaoEtAl2006AscSWISS08 ):
+    pga     0.460
+    0.050    0.453
+    0.100    0.450
+    0.150    0.468
+    0.200    0.480
+    0.250    0.480
+    0.300    0.480
+    0.400    0.469
+    0.500    0.460
+    0.600    0.457
+    0.700    0.455
+    0.800    0.453
+    0.900    0.452
+    1.000    0.450
+    1.250    0.442
+    1.500    0.435
+    2.000    0.425
+    2.500    0.417
+    3.000    0.410
+    4.000    0.410
+    5.000    0.410
+    """)
+
+
+class ZhaoEtAl2006AscSWISS08T(ZhaoEtAl2006AscSWISS08):
+
     """
     --------------------------------------------------------------------
     This class implments an extension of the ZhaoEtAl (2006Asc) model,
     adjusted to be used for the new Swiss Hazard Model [2014].
     1) kappa value
-       K-adjustments corresponding to model 08 (upper model) - as prepared by Ben Edwards 
+       K-adjustments corresponding to model 08 (upper model) - as prepared by Ben Edwards
        K-value for PGA were not provided but infered from SA[]0.01s]
        the model considers a fixed value of vs30=1100m/s
     2) small-magnitude correction
@@ -917,28 +987,32 @@ class ZhaoEtAl2006AscSWISS08T( ZhaoEtAl2006AscSWISS08 ):
     adjustement when computing the single station sigma (reported as total
     standard deviation))
     ------------------------------------------------------------------------
-    Disclaimer: these equations are modified to be used for the 
-    new Swiss Seismic Hazard Model [2014]. 
+    Disclaimer: these equations are modified to be used for the
+    new Swiss Seismic Hazard Model [2014].
     The use of these models is the soly responsability of the hazard modeler.
     --------------------------------------------------------------------
-    Model implmented by laurentiu.danciu@sed.ethz.ch 
+    Model implmented by laurentiu.danciu@sed.ethz.ch
     --------------------------------------------------------------------
     """
 
-    def get_mean_and_stddevs( self, sites, rup, dists, imt, stddev_types ):
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         Adjust the meadian value to the soil-type used for
         Swiss hazard Vs30=1100m/s
         """
         C_ADJ = self.COEFFS_PHI_SS[imt]
 
-        mean, stddevs = super( ZhaoEtAl2006AscSWISS08T, self ).get_mean_and_stddevs( sites, rup, dists, imt,stddev_types )
+        mean, stddevs = super(
+            ZhaoEtAl2006AscSWISS08T, self).get_mean_and_stddevs(
+            sites, rup, dists, imt, stddev_types)
 
-        std_corr = self._get_corr_stddevs(self.COEFFS_ASC[imt], stddev_types,len(sites.vs30),C_ADJ['phi_ss'])
-        stddevs = np.array( std_corr )
+        std_corr = self._get_corr_stddevs(
+            self.COEFFS_ASC[imt], stddev_types, len(
+                sites.vs30), C_ADJ['phi_ss'])
+        stddevs = np.array(std_corr)
         return mean, stddevs
 
-    def _get_corr_stddevs( self, C, stddev_types, num_sites,phi_ss):
+    def _get_corr_stddevs(self, C, stddev_types, num_sites, phi_ss):
         """
         Return standard deviations adjusted for single station sigma
         as proposed to be used in the new Swiss Hazard Model [2014].
@@ -947,35 +1021,38 @@ class ZhaoEtAl2006AscSWISS08T( ZhaoEtAl2006AscSWISS08 ):
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append( np.sqrt( C['tauC'] **2 + phi_ss**2 ) + np.zeros( num_sites ) )
+                stddevs.append(
+                    np.sqrt(
+                        C['tauC'] ** 2 +
+                        phi_ss ** 2) +
+                    np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append( C['sigma'] + np.zeros( num_sites ) )
+                stddevs.append(C['sigma'] + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append( C['tauC'] + np.zeros( num_sites ) )
+                stddevs.append(C['tauC'] + np.zeros(num_sites))
             return stddevs
 
-
-    COEFFS_PHI_SS = CoeffsTable( sa_damping = 5, table = """\
+    COEFFS_PHI_SS = CoeffsTable(sa_damping=5, table="""\
     IMT     phi_ss
-	pga 	0.460
-	0.050	0.453
-	0.100	0.450
-	0.150	0.468
-	0.200	0.480
-	0.250	0.480
-	0.300	0.480
-	0.400	0.469
-	0.500	0.460
-	0.600	0.457
-	0.700	0.455
-	0.800	0.453
-	0.900	0.452
-	1.000	0.450
-	1.250	0.442
-	1.500	0.435
-	2.000	0.425
-	2.500	0.417
-	3.000	0.410
-	4.000	0.410
-	5.000	0.410
-    """ )
+    pga     0.460
+    0.050    0.453
+    0.100    0.450
+    0.150    0.468
+    0.200    0.480
+    0.250    0.480
+    0.300    0.480
+    0.400    0.469
+    0.500    0.460
+    0.600    0.457
+    0.700    0.455
+    0.800    0.453
+    0.900    0.452
+    1.000    0.450
+    1.250    0.442
+    1.500    0.435
+    2.000    0.425
+    2.500    0.417
+    3.000    0.410
+    4.000    0.410
+    5.000    0.410
+    """)

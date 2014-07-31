@@ -26,6 +26,7 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 
 
 class ChiouYoungs2008(GMPE):
+
     """
     Implements GMPE developed by Brian S.-J. Chiou and Robert R. Youngs
     and published as "An NGA Model for the Average Horizontal Component
@@ -145,8 +146,8 @@ class ChiouYoungs2008(GMPE):
         sigma = (
             # first line of eq. 20
             (C['sig1']
-            + 0.5 * (C['sig2'] - C['sig1']) * mag_test
-            + C['sig4'] * AS)
+             + 0.5 * (C['sig2'] - C['sig1']) * mag_test
+             + C['sig4'] * AS)
             # second line
             * np.sqrt((C['sig3'] * Finferred + 0.7 * Fmeasured)
                       + (1 + NL) ** 2)
@@ -243,65 +244,71 @@ class ChiouYoungs2008(GMPE):
     7.5    1.06 3.45 -2.1 -0.5 50.0 3.0 4.0 -5.1224 -0.0999 -0.1010 1.498 5.9891 5.2000 0.4500 0.0000 0.0000 0.0000 2.7177  0.7514 -0.00096 -0.00094 -0.8346  0.0000 -0.001369 0.001134 0.4800 0.005517 320.3  0.2660 0.5328 0.5328 0.4416 0.4213 0.7000 0.0018
     10.0   1.06 3.45 -2.1 -0.5 50.0 3.0 4.0 -5.5872 -0.1000 -0.1000 1.502 6.1930 5.2000 0.4500 0.0000 0.0000 0.0000 2.7180  1.1856 -0.00094 -0.00091 -0.7332  0.0000 -0.001361 0.000515 0.4800 0.005517 320.1  0.2682 0.5542 0.5542 0.4414 0.4213 0.7000 0.0014
     """)
+
+
 class ChiouYoungs2008SWISS01(ChiouYoungs2008):
+
     """
     --------------------------------------------------------------------
     This class implments an extension of the Chiou & Youngs (2008) model,
     adjusted to be used for the new Swiss Hazard Model [2014].
     1) kappa value
-       K-adjustments corresponding to model 01 (lower bound)- as prepared by Ben Edwards 
+       K-adjustments corresponding to model 01 (lower bound)- as prepared by Ben Edwards
        K-value for PGA were not provided but infered from SA[]0.01s]
        the model considers a fixed value of vs30=1100m/s
     2) small-magnitude correction
     3) single station sigma - mean inter-event adjustment
     4) single station sigma - inter-event magnitude/distance dependent
     ------------------------------------------------------------------------
-    Disclaimer: these equations are modified to be used for the 
-    new Swiss Seismic Hazard Model [2014]. 
+    Disclaimer: these equations are modified to be used for the
+    new Swiss Seismic Hazard Model [2014].
     The use of these models is the soly responsability of the hazard modeler.
     --------------------------------------------------------------------
-    Model implmented by laurentiu.danciu@sed.ethz.ch 
+    Model implmented by laurentiu.danciu@sed.ethz.ch
     --------------------------------------------------------------------
     """
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
 
         C_ADJ = self.COEFFS_FS_ROCK[imt]
         C = self.COEFFS[imt]
-        C1_rrup =self._compute_C1_term(C_ADJ,imt, dists)
+        C1_rrup = self._compute_C1_term(C_ADJ, imt, dists)
         phi_ss = self._compute_phi_ss(C_ADJ, rup, C1_rrup, imt)
-        
+
         ln_y_ref = self._get_ln_y_ref(rup, dists, self.COEFFS[imt])
 
         exp1 = np.exp(C['phi3'] * (sites.vs30.clip(-np.inf, 1130) - 360))
 
         exp2 = np.exp(C['phi3'] * (1130 - 360))
-        
-        mean, stddevs = super(ChiouYoungs2008SWISS01,self).\
-        get_mean_and_stddevs(sites,rup,dists,imt,stddev_types)
 
-        mean_corr =  np.exp(mean) * C_ADJ['k_adj'] * self._compute_small_mag_correction_term(C_ADJ, rup.mag, dists.rrup)
+        mean, stddevs = super(ChiouYoungs2008SWISS01, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+
+        mean_corr = np.exp(
+            mean) * C_ADJ['k_adj'] * self._compute_small_mag_correction_term(C_ADJ, rup.mag, dists.rrup)
         mean = np.log(mean_corr)
 
-        std_corr = self._get_corr_stddevs(C, rup, stddev_types,ln_y_ref, exp1, exp2, phi_ss, sites)
+        std_corr = self._get_corr_stddevs(
+            C, rup, stddev_types, ln_y_ref, exp1, exp2, phi_ss, sites)
         stddevs = np.array(std_corr)
 
         return mean, stddevs
-    
-    def _compute_small_mag_correction_term(self,C,mag,rrup):
+
+    def _compute_small_mag_correction_term(self, C, mag, rrup):
         """
         small magnitude correction applied to the median values
-        """        
+        """
         if mag >= 3.00 and mag < 5.5:
-          return 1 / np.exp(((5.50-mag)/C['a1'])**C['a2']*(C['b1'] + C['b2'] * np.log(np.maximum(np.minimum(rrup, C['Rm']), 10)/20)))
+            return 1 / np.exp(((5.50 - mag) / C['a1']) ** C['a2'] * (C['b1'] + C['b2'] * np.log(np.maximum(np.minimum(rrup, C['Rm']), 10) / 20)))
         elif mag >= 5.50:
-          return 1
+            return 1
         else:
-          return 1
+            return 1
 
-    def _get_corr_stddevs( self, C, rup, stddev_types, ln_y_ref, exp1, exp2,phi_ss, sites):
+    def _get_corr_stddevs(self, C, rup, stddev_types, ln_y_ref, exp1, exp2, phi_ss, sites):
         """
         Return standard deviations adjusted for single station sigma
-        as the total standard deviation - as proposed to be used in 
+        as the total standard deviation - as proposed to be used in
         the new Swiss Hazard Model [2014].
         """
         # aftershock flag is zero, we consider only main shock.
@@ -333,21 +340,23 @@ class ChiouYoungs2008SWISS01(ChiouYoungs2008):
                 ret.append(np.abs((1 + NL) * tau))
         return ret
 
-    def _compute_C1_term( self, C, imt,dists ):
+    def _compute_C1_term(self, C, imt, dists):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
         """
-        C1_rrup =0.0
-        if dists.rrup < C['Rc11']:
+        C1_rrup = 0.0
+        if (dists.rrup < C['Rc11']).any():
             C1_rrup = C['phi_11']
-        elif dists.rrup >= C['Rc11'] and dists.rrup <= C['Rc21']:
-            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
-        elif dists.rrup > C['Rc21']:
+        elif ((dists.rrup >= C['Rc11']).any()
+                and (dists.rrup <= C['Rc21']).any()):
+            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * \
+                ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
+        elif (dists.rrup > C['Rc21']).any():
             C1_rrup = C['phi_21']
         return C1_rrup
 
-    def _compute_phi_ss( self, C, rup, C1_rrup ,imt):
+    def _compute_phi_ss(self, C, rup, C1_rrup, imt):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
@@ -358,7 +367,9 @@ class ChiouYoungs2008SWISS01(ChiouYoungs2008):
         if rup.mag < C['Mc1']:
             phi_ss = C1_rrup
         elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
-            phi_ss = C1_rrup + (C['C2'] - C1_rrup) * ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
+            phi_ss = C1_rrup + \
+                (C['C2'] - C1_rrup) * \
+                ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
         elif rup.mag > C['Mc2']:
             phi_ss = C['C2']
         return (phi_ss)
@@ -386,65 +397,71 @@ class ChiouYoungs2008SWISS01(ChiouYoungs2008):
  10.00   0.894172022     2.563667E+00    1.000000E+00    9.992372E-01    -5.870069E-01   1.097264E+02   0.53000  0.40000  0.40000  5    7   16      36    0.41000
 
     """)
+
+
 class ChiouYoungs2008SWISS06(ChiouYoungs2008):
+
     """
     --------------------------------------------------------------------
     This class implments an extension of the Chiou & Youngs (2008) model,
     adjusted to be used for the new Swiss Hazard Model [2014].
     1) kappa value
-       K-adjustments corresponding to model 06 (mid model)- as prepared by Ben Edwards 
+       K-adjustments corresponding to model 06 (mid model)- as prepared by Ben Edwards
        K-value for PGA were not provided but infered from SA[]0.01s]
        the model considers a fixed value of vs30=1100m/s
     2) small-magnitude correction
     3) single station sigma - mean inter-event adjustment
     4) single station sigma - inter-event magnitude/distance dependent
     ------------------------------------------------------------------------
-    Disclaimer: these equations are modified to be used for the 
-    new Swiss Seismic Hazard Model [2014]. 
+    Disclaimer: these equations are modified to be used for the
+    new Swiss Seismic Hazard Model [2014].
     The use of these models is the soly responsability of the hazard modeler.
     --------------------------------------------------------------------
-    Model implmented by laurentiu.danciu@sed.ethz.ch 
+    Model implmented by laurentiu.danciu@sed.ethz.ch
     --------------------------------------------------------------------
     """
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
 
         C_ADJ = self.COEFFS_FS_ROCK[imt]
         C = self.COEFFS[imt]
-        C1_rrup =self._compute_C1_term(C_ADJ,imt, dists)
+        C1_rrup = self._compute_C1_term(C_ADJ, imt, dists)
         phi_ss = self._compute_phi_ss(C_ADJ, rup, C1_rrup, imt)
-        
+
         ln_y_ref = self._get_ln_y_ref(rup, dists, self.COEFFS[imt])
 
         exp1 = np.exp(C['phi3'] * (sites.vs30.clip(-np.inf, 1130) - 360))
 
         exp2 = np.exp(C['phi3'] * (1130 - 360))
-        
-        mean, stddevs = super(ChiouYoungs2008SWISS06,self).\
-        get_mean_and_stddevs(sites,rup,dists,imt,stddev_types)
 
-        mean_corr =  np.exp(mean) * C_ADJ['k_adj'] * self._compute_small_mag_correction_term(C_ADJ, rup.mag, dists.rrup)
+        mean, stddevs = super(ChiouYoungs2008SWISS06, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+
+        mean_corr = np.exp(
+            mean) * C_ADJ['k_adj'] * self._compute_small_mag_correction_term(C_ADJ, rup.mag, dists.rrup)
         mean = np.log(mean_corr)
 
-        std_corr = self._get_corr_stddevs(C, rup, stddev_types,ln_y_ref, exp1, exp2, phi_ss, sites)
+        std_corr = self._get_corr_stddevs(
+            C, rup, stddev_types, ln_y_ref, exp1, exp2, phi_ss, sites)
         stddevs = np.array(std_corr)
 
         return mean, stddevs
-    
-    def _compute_small_mag_correction_term(self,C,mag,rrup):
+
+    def _compute_small_mag_correction_term(self, C, mag, rrup):
         """
         small magnitude correction applied to the median values
-        """        
+        """
         if mag >= 3.00 and mag < 5.5:
-          return 1 / np.exp(((5.50-mag)/C['a1'])**C['a2']*(C['b1'] + C['b2'] * np.log(np.maximum(np.minimum(rrup, C['Rm']), 10)/20)))
+            return 1 / np.exp(((5.50 - mag) / C['a1']) ** C['a2'] * (C['b1'] + C['b2'] * np.log(np.maximum(np.minimum(rrup, C['Rm']), 10) / 20)))
         elif mag >= 5.50:
-          return 1
+            return 1
         else:
-          return 1
+            return 1
 
-    def _get_corr_stddevs( self, C, rup, stddev_types, ln_y_ref, exp1, exp2,phi_ss, sites):
+    def _get_corr_stddevs(self, C, rup, stddev_types, ln_y_ref, exp1, exp2, phi_ss, sites):
         """
         Return standard deviations adjusted for single station sigma
-        as the total standard deviation - as proposed to be used in 
+        as the total standard deviation - as proposed to be used in
         the new Swiss Hazard Model [2014].
         """
         # aftershock flag is zero, we consider only main shock.
@@ -476,21 +493,23 @@ class ChiouYoungs2008SWISS06(ChiouYoungs2008):
                 ret.append(np.abs((1 + NL) * tau))
         return ret
 
-    def _compute_C1_term( self, C, imt,dists ):
+    def _compute_C1_term(self, C, imt, dists):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
         """
-        C1_rrup =0.0
-        if dists.rrup < C['Rc11']:
+        C1_rrup = 0.0
+        if (dists.rrup < C['Rc11']).any():
             C1_rrup = C['phi_11']
-        elif dists.rrup >= C['Rc11'] and dists.rrup <= C['Rc21']:
-            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
-        elif dists.rrup > C['Rc21']:
+        elif ((dists.rrup >= C['Rc11']).any()
+                and (dists.rrup <= C['Rc21']).any()):
+            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * \
+                ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
+        elif (dists.rrup > C['Rc21']).any():
             C1_rrup = C['phi_21']
         return C1_rrup
 
-    def _compute_phi_ss( self, C, rup, C1_rrup ,imt):
+    def _compute_phi_ss(self, C, rup, C1_rrup, imt):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
@@ -501,12 +520,13 @@ class ChiouYoungs2008SWISS06(ChiouYoungs2008):
         if rup.mag < C['Mc1']:
             phi_ss = C1_rrup
         elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
-            phi_ss = C1_rrup + (C['C2'] - C1_rrup) * ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
+            phi_ss = C1_rrup + \
+                (C['C2'] - C1_rrup) * \
+                ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
         elif rup.mag > C['Mc2']:
             phi_ss = C['C2']
         return (phi_ss)
 
-    
     COEFFS_FS_ROCK = CoeffsTable(sa_damping=5, table="""\
  IMT     k_adj                   a1              a2              b1              b2              Rm     phi_11   phi_21   C2       Mc1  Mc2 Rc11    Rc21 phi_SS
  pga     0.907406000     6.308282E+00    1.000000E+00    9.814496E-01    -7.784689E-01   7.056087E+01   0.58000  0.47000  0.35000  5    7   16      36   0.46000
@@ -529,65 +549,71 @@ class ChiouYoungs2008SWISS06(ChiouYoungs2008):
  7.500   0.929535851     2.563667E+00    1.000000E+00    9.992372E-01    -5.870069E-01   1.097264E+02   0.53000  0.40000  0.40000  5    7   16      36   0.41000
  10.00   0.942324350     2.563667E+00    1.000000E+00    9.992372E-01    -5.870069E-01   1.097264E+02   0.53000  0.40000  0.40000  5    7   16      36   0.41000
     """)
+
+
 class ChiouYoungs2008SWISS04(ChiouYoungs2008):
+
     """
     --------------------------------------------------------------------
     This class implments an extension of the Chiou & Youngs (2008) model,
     adjusted to be used for the new Swiss Hazard Model [2014].
     1) kappa value
-       K-adjustments corresponding to model 04 (upper bound) - as prepared by Ben Edwards 
+       K-adjustments corresponding to model 04 (upper bound) - as prepared by Ben Edwards
        K-value for PGA were not provided but infered from SA[]0.01s]
        the model considers a fixed value of vs30=1100m/s
     2) small-magnitude correction
     3) single station sigma - mean inter-event adjustment
     4) single station sigma - inter-event magnitude/distance dependent
     ------------------------------------------------------------------------
-    Disclaimer: these equations are modified to be used for the 
-    new Swiss Seismic Hazard Model [2014]. 
+    Disclaimer: these equations are modified to be used for the
+    new Swiss Seismic Hazard Model [2014].
     The use of these models is the soly responsability of the hazard modeler.
     --------------------------------------------------------------------
-    Model implmented by laurentiu.danciu@sed.ethz.ch 
+    Model implmented by laurentiu.danciu@sed.ethz.ch
     --------------------------------------------------------------------
     """
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
 
         C_ADJ = self.COEFFS_FS_ROCK[imt]
         C = self.COEFFS[imt]
-        C1_rrup =self._compute_C1_term(C_ADJ,imt, dists)
+        C1_rrup = self._compute_C1_term(C_ADJ, imt, dists)
         phi_ss = self._compute_phi_ss(C_ADJ, rup, C1_rrup, imt)
-        
+
         ln_y_ref = self._get_ln_y_ref(rup, dists, self.COEFFS[imt])
 
         exp1 = np.exp(C['phi3'] * (sites.vs30.clip(-np.inf, 1130) - 360))
 
         exp2 = np.exp(C['phi3'] * (1130 - 360))
-        
-        mean, stddevs = super(ChiouYoungs2008SWISS04,self).\
-        get_mean_and_stddevs(sites,rup,dists,imt,stddev_types)
 
-        mean_corr =  np.exp(mean) * C_ADJ['k_adj'] * self._compute_small_mag_correction_term(C_ADJ, rup.mag, dists.rrup)
+        mean, stddevs = super(ChiouYoungs2008SWISS04, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+
+        mean_corr = np.exp(
+            mean) * C_ADJ['k_adj'] * self._compute_small_mag_correction_term(C_ADJ, rup.mag, dists.rrup)
         mean = np.log(mean_corr)
 
-        std_corr = self._get_corr_stddevs(C, rup, stddev_types,ln_y_ref, exp1, exp2, phi_ss, sites)
+        std_corr = self._get_corr_stddevs(
+            C, rup, stddev_types, ln_y_ref, exp1, exp2, phi_ss, sites)
         stddevs = np.array(std_corr)
 
         return mean, stddevs
-    
-    def _compute_small_mag_correction_term(self,C,mag,rrup):
+
+    def _compute_small_mag_correction_term(self, C, mag, rrup):
         """
         small magnitude correction applied to the median values
-        """        
+        """
         if mag >= 3.00 and mag < 5.5:
-          return 1 / np.exp(((5.50-mag)/C['a1'])**C['a2']*(C['b1'] + C['b2'] * np.log(np.maximum(np.minimum(rrup, C['Rm']), 10)/20)))
+            return 1 / np.exp(((5.50 - mag) / C['a1']) ** C['a2'] * (C['b1'] + C['b2'] * np.log(np.maximum(np.minimum(rrup, C['Rm']), 10) / 20)))
         elif mag >= 5.50:
-          return 1
+            return 1
         else:
-          return 1
+            return 1
 
-    def _get_corr_stddevs( self, C, rup, stddev_types, ln_y_ref, exp1, exp2,phi_ss, sites):
+    def _get_corr_stddevs(self, C, rup, stddev_types, ln_y_ref, exp1, exp2, phi_ss, sites):
         """
         Return standard deviations adjusted for single station sigma
-        as the total standard deviation - as proposed to be used in 
+        as the total standard deviation - as proposed to be used in
         the new Swiss Hazard Model [2014].
         """
         # aftershock flag is zero, we consider only main shock.
@@ -619,21 +645,23 @@ class ChiouYoungs2008SWISS04(ChiouYoungs2008):
                 ret.append(np.abs((1 + NL) * tau))
         return ret
 
-    def _compute_C1_term( self, C, imt,dists ):
+    def _compute_C1_term(self, C, imt, dists):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
         """
-        C1_rrup =0.0
-        if dists.rrup < C['Rc11']:
+        C1_rrup = 0.0
+        if (dists.rrup < C['Rc11']).any():
             C1_rrup = C['phi_11']
-        elif dists.rrup >= C['Rc11'] and dists.rrup <= C['Rc21']:
-            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
-        elif dists.rrup > C['Rc21']:
+        elif ((dists.rrup >= C['Rc11']).any()
+                and (dists.rrup <= C['Rc21']).any()):
+            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * \
+                ((dists.rrup - C['Rc11']) / (C['Rc21'] - C['Rc11']))
+        elif (dists.rrup > C['Rc21']).any():
             C1_rrup = C['phi_21']
         return C1_rrup
 
-    def _compute_phi_ss( self, C, rup, C1_rrup ,imt):
+    def _compute_phi_ss(self, C, rup, C1_rrup, imt):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
@@ -644,11 +672,12 @@ class ChiouYoungs2008SWISS04(ChiouYoungs2008):
         if rup.mag < C['Mc1']:
             phi_ss = C1_rrup
         elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
-            phi_ss = C1_rrup + (C['C2'] - C1_rrup) * ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
+            phi_ss = C1_rrup + \
+                (C['C2'] - C1_rrup) * \
+                ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
         elif rup.mag > C['Mc2']:
             phi_ss = C['C2']
         return (phi_ss)
-
 
     COEFFS_FS_ROCK = CoeffsTable(sa_damping=5, table="""\
 IMT     k_adj                   a1              a2              b1              b2              Rm      phi_11   phi_21   C2       Mc1  Mc2 Rc11    Rc21  phi_SS
@@ -671,14 +700,17 @@ pga     1.144220000    6.308282E+00    1.000000E+00    9.814496E-01    -7.784689
 5.000   0.861360769    2.563667E+00    1.000000E+00    9.992372E-01    -5.870069E-01   1.097264E+02     0.53000  0.40000  0.40000  5    7   16      36    0.41000
 7.500   0.892087590    2.563667E+00    1.000000E+00    9.992372E-01    -5.870069E-01   1.097264E+02     0.53000  0.40000  0.40000  5    7   16      36    0.41000
 10.00   0.914551086    2.563667E+00    1.000000E+00    9.992372E-01    -5.870069E-01   1.097264E+02     0.53000  0.40000  0.40000  5    7   16      36    0.41000
-    """)    
+    """)
+
+
 class ChiouYoungs2008SWISS01T(ChiouYoungs2008SWISS01):
+
     """
     --------------------------------------------------------------------
     This class implments an extension of the Chiou & Youngs(2008) model,
     adjusted to be used for the new Swiss Hazard Model [2014].
     1) kappa value
-       K-adjustments corresponding to model 01 - as prepared by Ben Edwards 
+       K-adjustments corresponding to model 01 - as prepared by Ben Edwards
        K-value for PGA were not provided but infered from SA[]0.01s]
        the model considers a fixed value of vs30=1100m/s
     2) small-magnitude correction
@@ -689,40 +721,42 @@ class ChiouYoungs2008SWISS01T(ChiouYoungs2008SWISS01):
     adjustement when computing the single station sigma (reported as total
     standard deviation))
     ------------------------------------------------------------------------
-    Disclaimer: these equations are modified to be used for the 
-    new Swiss Seismic Hazard Model [2014]. 
+    Disclaimer: these equations are modified to be used for the
+    new Swiss Seismic Hazard Model [2014].
     The use of these models is the soly responsability of the hazard modeler.
     --------------------------------------------------------------------
-    Model implmented by laurentiu.danciu@sed.ethz.ch 
+    Model implmented by laurentiu.danciu@sed.ethz.ch
     --------------------------------------------------------------------
     """
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
 
         C_ADJ = self.COEFFS_FS_ROCK[imt]
-        
+
         C = self.COEFFS[imt]
-        
+
         ln_y_ref = self._get_ln_y_ref(rup, dists, C)
         exp1 = np.exp(C['phi3'] * (sites.vs30.clip(-np.inf, 1130) - 360))
         exp2 = np.exp(C['phi3'] * (1130 - 360))
-        
-        mean, stddevs = super(ChiouYoungs2008SWISS01T,self).\
-        get_mean_and_stddevs(sites,rup,dists,imt,stddev_types)
 
+        mean, stddevs = super(ChiouYoungs2008SWISS01T, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
 
-        std_corr = self._get_corr_stddevs(C, rup, stddev_types,ln_y_ref, exp1, exp2, C_ADJ['phi_SS'], sites)
+        std_corr = self._get_corr_stddevs(
+            C, rup, stddev_types, ln_y_ref, exp1, exp2, C_ADJ['phi_SS'], sites)
         stddevs = np.array(std_corr)
 
         return mean, stddevs
-        
+
+
 class ChiouYoungs2008SWISS06T(ChiouYoungs2008SWISS06):
+
     """
     --------------------------------------------------------------------
     This class implments an extension of the Chiou & Youngs(2008) model,
     adjusted to be used for the new Swiss Hazard Model [2014].
     1) kappa value
-       K-adjustments corresponding to model 06 (mid model)- as prepared by Ben Edwards 
+       K-adjustments corresponding to model 06 (mid model)- as prepared by Ben Edwards
        K-value for PGA were not provided but infered from SA[]0.01s]
        the model considers a fixed value of vs30=1100m/s
     2) small-magnitude correction
@@ -733,42 +767,44 @@ class ChiouYoungs2008SWISS06T(ChiouYoungs2008SWISS06):
     adjustement when computing the single station sigma (reported as total
     standard deviation))
     ------------------------------------------------------------------------
-    Disclaimer: these equations are modified to be used for the 
-    new Swiss Seismic Hazard Model [2014]. 
+    Disclaimer: these equations are modified to be used for the
+    new Swiss Seismic Hazard Model [2014].
     The use of these models is the soly responsability of the hazard modeler.
     --------------------------------------------------------------------
-    Model implmented by laurentiu.danciu@sed.ethz.ch 
+    Model implmented by laurentiu.danciu@sed.ethz.ch
     --------------------------------------------------------------------
     """
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
 
         C_ADJ = self.COEFFS_FS_ROCK[imt]
         C = self.COEFFS[imt]
 
-        C1_rrup =self._compute_C1_term(C_ADJ,imt, dists)
+        C1_rrup = self._compute_C1_term(C_ADJ, imt, dists)
         phi_ss = self._compute_phi_ss(C_ADJ, rup, C1_rrup, imt)
-        
+
         ln_y_ref = self._get_ln_y_ref(rup, dists, self.COEFFS[imt])
         exp1 = np.exp(C['phi3'] * (sites.vs30.clip(-np.inf, 1130) - 360))
         exp2 = np.exp(C['phi3'] * (1130 - 360))
-        
-        mean, stddevs = super(ChiouYoungs2008SWISS06T,self).\
-        get_mean_and_stddevs(sites,rup,dists,imt,stddev_types)
 
+        mean, stddevs = super(ChiouYoungs2008SWISS06T, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
 
-        std_corr = self._get_corr_stddevs(C, rup, stddev_types,ln_y_ref, exp1, exp2, C_ADJ['phi_SS'], sites)
+        std_corr = self._get_corr_stddevs(
+            C, rup, stddev_types, ln_y_ref, exp1, exp2, C_ADJ['phi_SS'], sites)
         stddevs = np.array(std_corr)
 
         return mean, stddevs
-        
-        
+
+
 class ChiouYoungs2008SWISS04T(ChiouYoungs2008SWISS04):
+
     """
     --------------------------------------------------------------------
     This class implments an extension of the Chiou & Youngs(2008) model,
     adjusted to be used for the new Swiss Hazard Model [2014].
     1) kappa value
-       K-adjustments corresponding to model 04 (upper bound) - as prepared by Ben Edwards 
+       K-adjustments corresponding to model 04 (upper bound) - as prepared by Ben Edwards
        K-value for PGA were not provided but infered from SA[]0.01s]
        the model considers a fixed value of vs30=1100m/s
     2) small-magnitude correction
@@ -779,30 +815,31 @@ class ChiouYoungs2008SWISS04T(ChiouYoungs2008SWISS04):
     adjustement when computing the single station sigma (reported as total
     standard deviation))
     ------------------------------------------------------------------------
-    Disclaimer: these equations are modified to be used for the 
-    new Swiss Seismic Hazard Model [2014]. 
+    Disclaimer: these equations are modified to be used for the
+    new Swiss Seismic Hazard Model [2014].
     The use of these models is the soly responsability of the hazard modeler.
     --------------------------------------------------------------------
-    Model implmented by laurentiu.danciu@sed.ethz.ch 
+    Model implmented by laurentiu.danciu@sed.ethz.ch
     --------------------------------------------------------------------
     """
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
 
         C_ADJ = self.COEFFS_FS_ROCK[imt]
         C = self.COEFFS[imt]
 
-        C1_rrup =self._compute_C1_term(C_ADJ,imt, dists)
+        C1_rrup = self._compute_C1_term(C_ADJ, imt, dists)
         phi_ss = self._compute_phi_ss(C_ADJ, rup, C1_rrup, imt)
-        
+
         ln_y_ref = self._get_ln_y_ref(rup, dists, self.COEFFS[imt])
         exp1 = np.exp(C['phi3'] * (sites.vs30.clip(-np.inf, 1130) - 360))
         exp2 = np.exp(C['phi3'] * (1130 - 360))
-        
-        mean, stddevs = super(ChiouYoungs2008SWISS04T,self).\
-        get_mean_and_stddevs(sites,rup,dists,imt,stddev_types)
 
+        mean, stddevs = super(ChiouYoungs2008SWISS04T, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
 
-        std_corr = self._get_corr_stddevs(C, rup, stddev_types,ln_y_ref, exp1, exp2, C_ADJ['phi_SS'], sites)
+        std_corr = self._get_corr_stddevs(
+            C, rup, stddev_types, ln_y_ref, exp1, exp2, C_ADJ['phi_SS'], sites)
         stddevs = np.array(std_corr)
 
         return mean, stddevs

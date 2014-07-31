@@ -29,6 +29,7 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 
 
 class CauzziFaccioli2008(GMPE):
+
     """
     Implements GMPE developed by Carlo Cauzzi and Ezio Faccioli and published
     as "Broadband (0.05 to 20s) prediction of displacement response spectra
@@ -129,7 +130,7 @@ class CauzziFaccioli2008(GMPE):
         # for rock values the site term is zero
         site_term = np.zeros_like(vs30)
 
-         # hard soil
+        # hard soil
         site_term[(vs30 >= 360) & (vs30 < 800)] = C['aB']
 
         # medium soil
@@ -176,19 +177,9 @@ class CauzziFaccioli2008(GMPE):
 
         return mean
 
-    #def _get_stddevs(self, C, stddev_types, num_sites):
-        #"""
-        #Return total standard deviation.
-        #"""
-        #stddevs = []
-        #for stddev_type in stddev_types:
-            #assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            #stddevs.append(np.log(10 ** C['sigma']) + np.zeros(num_sites))
-
-        #return stddevs
     def _get_stddevs(self, C, stddev_types, num_sites):
         """
-        Return standard deviations 
+        Return standard deviations
         """
         stddevs = []
         for stddev_type in stddev_types:
@@ -196,11 +187,12 @@ class CauzziFaccioli2008(GMPE):
             if stddev_type == const.StdDev.TOTAL:
                 stddevs.append(np.log(10 ** C['sigma']) + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(np.log(10 ** C['s_within_ev']) + np.zeros(num_sites))
+                stddevs.append(
+                    np.log(10 ** C['s_within_ev']) + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(np.log(10 ** C['s_between_ev']) + np.zeros(num_sites))
+                stddevs.append(
+                    np.log(10 ** C['s_between_ev']) + np.zeros(num_sites))
         return stddevs
-
 
     #: Coefficient table constructed from the electronic suplements of the
     #: original paper.
@@ -609,81 +601,84 @@ class CauzziFaccioli2008(GMPE):
     19.95     -4.5350267  1.0510743  0.0117816   -0.0866590  0.0307559   -1.0889565  0.0955338  0.2191705  0.3331256 0.2106   0.1122 0.2345780
     20.00     -4.5330479  1.0509283  0.0116658   -0.0865082  0.0307421   -1.0898739  0.0956245  0.2193853  0.3332079 0.2107   0.1122 0.2346923
     """)
+
+
 class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
+
     """
     --------------------------------------------------------------------
     This class implments an extension of the Cauzzi Faccioli (2008) model,
     adjusted to be used for the new Swiss Hazard Model [2014].
     1) kappa value
-       K-adjustments corresponding to model 01 - as prepared by Ben Edwards 
+       K-adjustments corresponding to model 01 - as prepared by Ben Edwards
        K-value for PGA were not provided but infered from SA[]0.01s]
        the model considers a fixed value of vs30=1100m/s
     2) small-magnitude correction
     3) single station sigma - mean inter-event adjustment
     4) single station sigma - inter-event magnitude/distance dependent
     ------------------------------------------------------------------------
-    Disclaimer: these equations are modified to be used with the 
-    new Swiss Seismic Hazard Model [2014]. 
+    Disclaimer: these equations are modified to be used with the
+    new Swiss Seismic Hazard Model [2014].
     The use of these models is the soly responsability of the hazard modeler.
     --------------------------------------------------------------------
-    Model implmented by laurentiu.danciu@sed.ethz.ch 
+    Model implmented by laurentiu.danciu@sed.ethz.ch
     --------------------------------------------------------------------
     """
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         adjust the median values to the soil-type used for Swiss Hazard 2013
         Vs30 = 1100m/s
         """
         C_ADJ = self.COEFFS_FS_ROCK[imt]
-        C1_rrup =self._compute_C1_term(C_ADJ,imt, dists)
+        C1_rrup = self._compute_C1_term(C_ADJ, imt, dists)
         phi_ss = self._compute_phi_ss(C_ADJ, rup, C1_rrup, imt)
 
-        mean, stddevs = super(CauzziFaccioli2008SWISS01,self).\
-        get_mean_and_stddevs(sites,rup,dists,imt,stddev_types)
-        
+        mean, stddevs = super(CauzziFaccioli2008SWISS01, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+
         #: apply k-correction corresponding to the lower model [01]
-        mean_corr =  np.exp(mean) * C_ADJ['k_adj'] * self._compute_small_mag_correction_term(C_ADJ, rup.mag, imt,dists.rhypo)
+        mean_corr = np.exp(
+            mean) * C_ADJ['k_adj'] * self._compute_small_mag_correction_term(C_ADJ, rup.mag, imt, dists.rhypo)
 
         mean = np.log(mean_corr)
-        std_corr = self._get_corr_stddevs(self.COEFFS[imt], stddev_types,len(sites.vs30),phi_ss)
-        stddevs = np.log( 10 ** np.array( std_corr ) )
-        #~ print phi_ss
-     
+        std_corr = self._get_corr_stddevs(
+            self.COEFFS[imt], stddev_types, len(sites.vs30), phi_ss)
+        stddevs = np.log(10 ** np.array(std_corr))
+
         stddevs = np.array(stddevs)
         return mean, stddevs
 
-    def _compute_small_mag_correction_term(self,C,mag,imt,rhypo):
+    def _compute_small_mag_correction_term(self, C, mag, imt, rhypo):
         """
         small magnitude correction applied to the median values
-        """  
+        """
         if mag >= 3.00 and mag < 5.5:
-           return 1 / np.exp(((5.50-mag)/C['a1'])**C['a2']*(C['b1'] + C['b2'] * np.log(np.maximum(np.minimum(rhypo, C['Rm']), 10)/20)))
-           #~ print mag
+            return 1 / np.exp(((5.50 - mag) / C['a1']) ** C['a2'] * (C['b1'] + C['b2'] * np.log(np.maximum(np.minimum(rhypo, C['Rm']), 10) / 20)))
         elif mag >= 5.50:
-           return 1
+            return 1
         else:
-           return 1
+            return 1
 
-    def _compute_C1_term( self, C, imt,dists ):
+    def _compute_C1_term(self, C, imt, dists):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
-        adjusted to reflect the Rhypo 
+        adjusted to reflect the Rhypo
         """
-        C1_rrup =0.0
-        
-        if dists.rhypo < C['Rc11']:
+        C1_rrup = 0.0
+
+        if (dists.rhypo < C['Rc11']).any():
             C1_rrup = C['phi_11']
-            #~ print 'case01 rhypo< ', C1_rrup
-        elif dists.rhypo >= C['Rc11'] and dists.rhypo <= C['Rc21']:
-            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * ((dists.rhypo - C['Rc11']) / (C['Rc21'] - C['Rc11']))
-            #~ print 'case02 rhypo> < ', C1_rrup
-        elif dists.rhypo > C['Rc21']:
+        elif ((dists.rhypo >= C['Rc11']).any()
+                and (dists.rhypo <= C['Rc21']).any()):
+            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * \
+                ((dists.rhypo - C['Rc11']) / (C['Rc21'] - C['Rc11']))
+        elif (dists.rhypo > C['Rc21']).any():
             C1_rrup = C['phi_21']
-            print 'case03 rhypo> ', C1_rrup
         return C1_rrup
 
-    def _compute_phi_ss( self, C, rup, C1_rrup ,imt):
+    def _compute_phi_ss(self, C, rup, C1_rrup, imt):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
@@ -695,29 +690,31 @@ class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
             phi_ss = C1_rrup
 
         elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
-            phi_ss = C1_rrup + (C['C2'] - C1_rrup) * ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
+            phi_ss = C1_rrup + \
+                (C['C2'] - C1_rrup) * \
+                ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
         elif rup.mag > C['Mc2']:
             phi_ss = C['C2']
         return phi_ss / np.log(10)
 
-    def _get_corr_stddevs( self, C, stddev_types, num_sites,phi_ss):
+    def _get_corr_stddevs(self, C, stddev_types, num_sites, phi_ss):
         """
         Return standard deviations adjusted for single station sigma
-        as the total standard deviation - as proposed to be used in 
+        as the total standard deviation - as proposed to be used in
         the new Swiss Hazard Model [2014].
         """
         stddevs = []
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(C['s_between_ev']**2 + phi_ss**2) + np.zeros(num_sites))
+                stddevs.append(
+                    np.sqrt(C['s_between_ev'] ** 2 + phi_ss ** 2) + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTRA_EVENT:
                 stddevs.append(np.log(C['s_within_ev']) + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTER_EVENT:
                 stddevs.append(np.log(C['s_between_ev']) + np.zeros(num_sites))
         return stddevs
 
-        
     COEFFS_FS_ROCK = CoeffsTable(sa_damping=5, table="""\
     IMT     k_adj          a1            a2            b1            b2            Rm            phi_11      phi_21      C2          Mc1    Mc2    Rc11    Rc21
     pga     0.845181       9.890787E-01  1.094114E+00  1.000921E+00  6.455198E-01  4.242559E+00  0.58        0.47        0.35        5      7      16      36
@@ -923,24 +920,26 @@ class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
     10.0    0.943393747    2.260874E-01  4.810965E-01  1.000493E+00  3.140312E-01  8.267642E-01  0.53        0.4         0.4         5      7      16      36
     """)
 
+
 class CauzziFaccioli2008SWISS04(CauzziFaccioli2008):
+
     """
     --------------------------------------------------------------------
     This class implments an extension of the Cauzzi Faccioli (2008) model,
     adjusted to be used for the new Swiss Hazard Model [2014].
     1) kappa value
-       K-adjustments corresponding to model 04 - as prepared by Ben Edwards 
+       K-adjustments corresponding to model 04 - as prepared by Ben Edwards
        K-value for PGA were not provided but infered from SA[]0.01s]
        the model considers a fixed value of vs30=1100m/s
     2) small-magnitude correction
     3) single station sigma - mean inter-event adjustment
     4) single station sigma - inter-event magnitude/distance dependent
     ------------------------------------------------------------------------
-    Disclaimer: these equations are modified to be used for the 
-    new Swiss Seismic Hazard Model [2014]. 
+    Disclaimer: these equations are modified to be used for the
+    new Swiss Seismic Hazard Model [2014].
     The use of these models is the soly responsability of the hazard modeler.
     --------------------------------------------------------------------
-    Model implmented by laurentiu.danciu@sed.ethz.ch 
+    Model implmented by laurentiu.danciu@sed.ethz.ch
     --------------------------------------------------------------------
     """
 
@@ -950,55 +949,54 @@ class CauzziFaccioli2008SWISS04(CauzziFaccioli2008):
         Vs30 = 1100m/s
         """
         C_ADJ = self.COEFFS_FS_ROCK[imt]
-        C1_rrup =self._compute_C1_term(C_ADJ,imt, dists)
+        C1_rrup = self._compute_C1_term(C_ADJ, imt, dists)
         phi_ss = self._compute_phi_ss(C_ADJ, rup, C1_rrup, imt)
 
-        mean, stddevs = super(CauzziFaccioli2008SWISS04,self).\
-        get_mean_and_stddevs(sites,rup,dists,imt,stddev_types)
-        
+        mean, stddevs = super(CauzziFaccioli2008SWISS04, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+
         #: apply k-correction corresponding to the lower model [01]
-        mean_corr =  np.exp(mean) * C_ADJ['k_adj'] * self._compute_small_mag_correction_term(C_ADJ, rup.mag, imt,dists.rhypo)
+        mean_corr = np.exp(
+            mean) * C_ADJ['k_adj'] * self._compute_small_mag_correction_term(C_ADJ, rup.mag, imt, dists.rhypo)
 
         mean = np.log(mean_corr)
-        std_corr = self._get_corr_stddevs(self.COEFFS[imt], stddev_types,len(sites.vs30),phi_ss)
-        stddevs = np.log( 10 ** np.array( std_corr ) )
-        print stddevs
-     
+        std_corr = self._get_corr_stddevs(
+            self.COEFFS[imt], stddev_types, len(sites.vs30), phi_ss)
+        stddevs = np.log(10 ** np.array(std_corr))
+
         stddevs = np.array(stddevs)
         return mean, stddevs
 
-    def _compute_small_mag_correction_term(self,C,mag,imt,rhypo):
+    def _compute_small_mag_correction_term(self, C, mag, imt, rhypo):
         """
         small magnitude correction applied to the median values
-        """  
+        """
         if mag >= 3.00 and mag < 5.5:
-           return 1 / np.exp(((5.50-mag)/C['a1'])**C['a2']*(C['b1'] + C['b2'] * np.log(np.maximum(np.minimum(rhypo, C['Rm']), 10)/20)))
-           print mag
+            return 1 / np.exp(((5.50 - mag) / C['a1']) ** C['a2'] * (C['b1'] + C['b2'] * np.log(np.maximum(np.minimum(rhypo, C['Rm']), 10) / 20)))
         elif mag >= 5.50:
-           return 1
+            return 1
         else:
-           return 1
+            return 1
 
-    def _compute_C1_term( self, C, imt,dists ):
+    def _compute_C1_term(self, C, imt, dists):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
-        adjusted to reflect the Rhypo 
+        adjusted to reflect the Rhypo
         """
-        C1_rrup =0.0
-        
-        if dists.rhypo < C['Rc11']:
+        C1_rrup = 0.0
+
+        if (dists.rhypo < C['Rc11']).any():
             C1_rrup = C['phi_11']
-            #~ print 'case01 rhypo< ', C1_rrup
-        elif dists.rhypo >= C['Rc11'] and dists.rhypo <= C['Rc21']:
-            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * ((dists.rhypo - C['Rc11']) / (C['Rc21'] - C['Rc11']))
-            #~ print 'case02 rhypo> < ', C1_rrup
-        elif dists.rhypo > C['Rc21']:
+        elif ((dists.rhypo >= C['Rc11']).any()
+                and (dists.rhypo <= C['Rc21']).any()):
+            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * \
+                ((dists.rhypo - C['Rc11']) / (C['Rc21'] - C['Rc11']))
+        elif (dists.rhypo > C['Rc21']).any():
             C1_rrup = C['phi_21']
-            print 'case03 rhypo> ', C1_rrup
         return C1_rrup
 
-    def _compute_phi_ss( self, C, rup, C1_rrup ,imt):
+    def _compute_phi_ss(self, C, rup, C1_rrup, imt):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
@@ -1010,29 +1008,31 @@ class CauzziFaccioli2008SWISS04(CauzziFaccioli2008):
             phi_ss = C1_rrup
 
         elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
-            phi_ss = C1_rrup + (C['C2'] - C1_rrup) * ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
+            phi_ss = C1_rrup + \
+                (C['C2'] - C1_rrup) * \
+                ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
         elif rup.mag > C['Mc2']:
             phi_ss = C['C2']
         return phi_ss / np.log(10)
 
-    def _get_corr_stddevs( self, C, stddev_types, num_sites,phi_ss):
+    def _get_corr_stddevs(self, C, stddev_types, num_sites, phi_ss):
         """
         Return standard deviations adjusted for single station sigma
-        as the total standard deviation - as proposed to be used in 
+        as the total standard deviation - as proposed to be used in
         the new Swiss Hazard Model [2014].
         """
         stddevs = []
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(C['s_between_ev']**2 + phi_ss**2) + np.zeros(num_sites))
+                stddevs.append(
+                    np.sqrt(C['s_between_ev'] ** 2 + phi_ss ** 2) + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTRA_EVENT:
                 stddevs.append(np.log(C['s_within_ev']) + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTER_EVENT:
                 stddevs.append(np.log(C['s_between_ev']) + np.zeros(num_sites))
         return stddevs
 
-    
     COEFFS_FS_ROCK = CoeffsTable(sa_damping=5, table="""\
     IMT     k_adj         a1              a2              b1              b2              Rm            phi_11    phi_21      C2          Mc1    Mc2    Rc11    Rc21
     pga     0.640173       9.890787E-01  1.094114E+00  1.000921E+00  6.455198E-01  4.242559E+00  0.58        0.47        0.35        5      7      16      36
@@ -1240,80 +1240,81 @@ class CauzziFaccioli2008SWISS04(CauzziFaccioli2008):
 
 
 class CauzziFaccioli2008SWISS08(CauzziFaccioli2008):
+
     """
     --------------------------------------------------------------------
     This class implments an extension of the Cauzzi Faccioli (2008) model,
     adjusted to be used for the new Swiss Hazard Model [2014].
     1) kappa value
-       K-adjustments corresponding to model 08 - as prepared by Ben Edwards 
+       K-adjustments corresponding to model 08 - as prepared by Ben Edwards
        K-value for PGA were not provided but infered from SA[]0.01s]
        the model considers a fixed value of vs30=1100m/s
     2) small-magnitude correction
     3) single station sigma - mean inter-event adjustment
     4) single station sigma - inter-event magnitude/distance dependent
     ------------------------------------------------------------------------
-    Disclaimer: these equations are modified to be used for the 
-    new Swiss Seismic Hazard Model [2014]. 
+    Disclaimer: these equations are modified to be used for the
+    new Swiss Seismic Hazard Model [2014].
     The use of these models is the soly responsability of the hazard modeler.
     --------------------------------------------------------------------
-    Model implmented by laurentiu.danciu@sed.ethz.ch 
+    Model implmented by laurentiu.danciu@sed.ethz.ch
     --------------------------------------------------------------------
     """
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         adjust the median values to the soil-type used for Swiss Hazard 2013
         Vs30 = 1100m/s
         """
         C_ADJ = self.COEFFS_FS_ROCK[imt]
-        C1_rrup =self._compute_C1_term(C_ADJ,imt, dists)
+        C1_rrup = self._compute_C1_term(C_ADJ, imt, dists)
         phi_ss = self._compute_phi_ss(C_ADJ, rup, C1_rrup, imt)
 
-        mean, stddevs = super(CauzziFaccioli2008SWISS08,self).\
-        get_mean_and_stddevs(sites,rup,dists,imt,stddev_types)
-        
+        mean, stddevs = super(CauzziFaccioli2008SWISS08, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+
         #: apply k-correction corresponding to the lower model [01]
-        mean_corr =  np.exp(mean) * C_ADJ['k_adj'] * self._compute_small_mag_correction_term(C_ADJ, rup.mag, imt,dists.rhypo)
+        mean_corr = np.exp(
+            mean) * C_ADJ['k_adj'] * self._compute_small_mag_correction_term(C_ADJ, rup.mag, imt, dists.rhypo)
 
         mean = np.log(mean_corr)
-        std_corr = self._get_corr_stddevs(self.COEFFS[imt], stddev_types,len(sites.vs30),phi_ss)
-        stddevs = np.log( 10 ** np.array( std_corr ) )
-        #print stddevs
-     
+        std_corr = self._get_corr_stddevs(
+            self.COEFFS[imt], stddev_types, len(sites.vs30), phi_ss)
+        stddevs = np.log(10 ** np.array(std_corr))
+
         stddevs = np.array(stddevs)
         return mean, stddevs
 
-    def _compute_small_mag_correction_term(self,C,mag,imt,rhypo):
+    def _compute_small_mag_correction_term(self, C, mag, imt, rhypo):
         """
         small magnitude correction applied to the median values
-        """  
+        """
         if mag >= 3.00 and mag < 5.5:
-           return 1 / np.exp(((5.50-mag)/C['a1'])**C['a2']*(C['b1'] + C['b2'] * np.log(np.maximum(np.minimum(rhypo, C['Rm']), 10)/20)))
-           print mag
+            return 1 / np.exp(((5.50 - mag) / C['a1']) ** C['a2'] * (C['b1'] + C['b2'] * np.log(np.maximum(np.minimum(rhypo, C['Rm']), 10) / 20)))
         elif mag >= 5.50:
-           return 1
+            return 1
         else:
-           return 1
+            return 1
 
-    def _compute_C1_term( self, C, imt,dists ):
+    def _compute_C1_term(self, C, imt, dists):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
-        adjusted to reflect the Rhypo 
+        adjusted to reflect the Rhypo
         """
-        C1_rrup =0.0
-        
-        if dists.rhypo < C['Rc11']:
+        C1_rrup = 0.0
+
+        if (dists.rhypo < C['Rc11']).any():
             C1_rrup = C['phi_11']
-            #~ print 'case01 rhypo< ', C1_rrup
-        elif dists.rhypo >= C['Rc11'] and dists.rhypo <= C['Rc21']:
-            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * ((dists.rhypo - C['Rc11']) / (C['Rc21'] - C['Rc11']))
-            #~ print 'case02 rhypo> < ', C1_rrup
-        elif dists.rhypo > C['Rc21']:
+        elif ((dists.rhypo >= C['Rc11']).any()
+                and (dists.rhypo <= C['Rc21']).any()):
+            C1_rrup = C['phi_11'] + (C['phi_21'] - C['phi_11']) * \
+                ((dists.rhypo - C['Rc11']) / (C['Rc21'] - C['Rc11']))
+        elif (dists.rhypo > C['Rc21']).any():
             C1_rrup = C['phi_21']
-            print 'case03 rhypo> ', C1_rrup
         return C1_rrup
 
-    def _compute_phi_ss( self, C, rup, C1_rrup ,imt):
+    def _compute_phi_ss(self, C, rup, C1_rrup, imt):
         """
         Return C1 coeffs as function of Rrup as proposed by Rodriguez-Marek et al (2013)
         The C1 coeff are used to compute the single station sigma
@@ -1325,29 +1326,32 @@ class CauzziFaccioli2008SWISS08(CauzziFaccioli2008):
             phi_ss = C1_rrup
 
         elif rup.mag >= C['Mc1'] and rup.mag <= C['Mc2']:
-            phi_ss = C1_rrup + (C['C2'] - C1_rrup) * ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
+            phi_ss = C1_rrup + \
+                (C['C2'] - C1_rrup) * \
+                ((rup.mag - C['Mc1']) / (C['Mc2'] - C['Mc1']))
         elif rup.mag > C['Mc2']:
             phi_ss = C['C2']
         return phi_ss / np.log(10)
 
-    def _get_corr_stddevs( self, C, stddev_types, num_sites,phi_ss):
+    def _get_corr_stddevs(self, C, stddev_types, num_sites, phi_ss):
         """
         Return standard deviations adjusted for single station sigma
-        as the total standard deviation - as proposed to be used in 
+        as the total standard deviation - as proposed to be used in
         the new Swiss Hazard Model [2014].
         """
         stddevs = []
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(C['s_between_ev']**2 + phi_ss**2) + np.zeros(num_sites))
+                stddevs.append(
+                    np.sqrt(C['s_between_ev'] ** 2 + phi_ss ** 2) + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTRA_EVENT:
                 stddevs.append(np.log(C['s_within_ev']) + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTER_EVENT:
                 stddevs.append(np.log(C['s_between_ev']) + np.zeros(num_sites))
         return stddevs
 
-    COEFFS_FS_ROCK =  CoeffsTable(sa_damping=5, table="""\
+    COEFFS_FS_ROCK = CoeffsTable(sa_damping=5, table="""\
     IMT   k_adj       a1      a2  b1  b2  Rm  phi_11      phi_21      C2          Mc1 Mc2 Rc11 Rc21
     pga   0.634915    9.890787E-01     1.094114E+00 1.000921E+00 6.455198E-01 4.242559E+00 0.58        0.47        0.35        5   7   16   36
     0.05  0.620699347 7.422166E-01     8.879871E-01 1.000934E+00 6.131160E-01 3.908670E+00 0.5520412   0.4490309   0.4059176   5   7   16   36
@@ -1551,14 +1555,16 @@ class CauzziFaccioli2008SWISS08(CauzziFaccioli2008):
     9.95  0.956046349 2.260874E-01     4.810965E-01 1.000493E+00 3.140312E-01 8.267642E-01 0.53        0.4         0.4         5   7   16   36
     10.0  0.956046349 2.260874E-01     4.810965E-01 1.000493E+00 3.140312E-01 8.267642E-01 0.53        0.4         0.4         5   7   16   36
     """)
-    
+
+
 class CauzziFaccioli2008SWISS01T(CauzziFaccioli2008SWISS01):
+
     """
     --------------------------------------------------------------------
     This class implments an extension of the Cauzzi Faccioli(2008) model,
     adjusted to be used for the new Swiss Hazard Model [2014].
     1) kappa value
-       K-adjustments corresponding to model 01 - as prepared by Ben Edwards 
+       K-adjustments corresponding to model 01 - as prepared by Ben Edwards
        K-value for PGA were not provided but infered from SA[]0.01s]
        the model considers a fixed value of vs30=1100m/s
     2) small-magnitude correction
@@ -1569,26 +1575,29 @@ class CauzziFaccioli2008SWISS01T(CauzziFaccioli2008SWISS01):
     adjustement when computing the single station sigma (reported as total
     standard deviation))
     ------------------------------------------------------------------------
-    Disclaimer: these equations are modified to be used for the 
-    new Swiss Seismic Hazard Model [2014]. 
+    Disclaimer: these equations are modified to be used for the
+    new Swiss Seismic Hazard Model [2014].
     The use of these models is the soly responsability of the hazard modeler.
     --------------------------------------------------------------------
-    Model implmented by laurentiu.danciu@sed.ethz.ch 
+    Model implmented by laurentiu.danciu@sed.ethz.ch
     """
-    def get_mean_and_stddevs( self, sites, rup, dists, imt, stddev_types ):
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         Adjust the meadian value to the soil-type used for
         Swiss hazard Vs30=1100m/s
         """
         C_ADJ = self.COEFFS_PHI_SS[imt]
 
-        mean, stddevs = super( CauzziFaccioli2008SWISS01T, self ).get_mean_and_stddevs( sites, rup, dists, imt,stddev_types )
+        mean, stddevs = super(CauzziFaccioli2008SWISS01T, self).get_mean_and_stddevs(
+            sites, rup, dists, imt, stddev_types)
 
-        std_corr = self._get_corr_stddevs(self.COEFFS[imt], stddev_types,len(sites.vs30),C_ADJ['phi_ss']/np.log(10))
-        stddevs = np.log( 10 ** np.array( std_corr ) )
+        std_corr = self._get_corr_stddevs(
+            self.COEFFS[imt], stddev_types, len(sites.vs30), C_ADJ['phi_ss'] / np.log(10))
+        stddevs = np.log(10 ** np.array(std_corr))
         return mean, stddevs
 
-    def _get_corr_stddevs( self, C, stddev_types, num_sites,phi_ss):
+    def _get_corr_stddevs(self, C, stddev_types, num_sites, phi_ss):
         """
         Return standard deviations adjusted for single station sigma
         as proposed to be used in the new Swiss Hazard Model [2014].
@@ -1597,14 +1606,15 @@ class CauzziFaccioli2008SWISS01T(CauzziFaccioli2008SWISS01):
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(C['s_between_ev']**2 + phi_ss**2) + np.zeros(num_sites))
+                stddevs.append(
+                    np.sqrt(C['s_between_ev'] ** 2 + phi_ss ** 2) + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTRA_EVENT:
                 stddevs.append(np.log(C['s_within_ev']) + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTER_EVENT:
                 stddevs.append(np.log(C['s_between_ev']) + np.zeros(num_sites))
         return stddevs
 
-    COEFFS_PHI_SS =      CoeffsTable( sa_damping = 5, table = """\
+    COEFFS_PHI_SS = CoeffsTable(sa_damping=5, table="""\
     IMT              phi_ss
     pga              0.460
     0.050            0.453
@@ -1808,13 +1818,16 @@ class CauzziFaccioli2008SWISS01T(CauzziFaccioli2008SWISS01):
     9.950            0.410
     10.000           0.410
     """)
+
+
 class CauzziFaccioli2008SWISS04T(CauzziFaccioli2008SWISS04):
+
     """
     --------------------------------------------------------------------
     This class implments an extension of the Cauzzi Faccioli(2008) model,
     adjusted to be used for the new Swiss Hazard Model [2014].
     1) kappa value
-       K-adjustments corresponding to model 04 - as prepared by Ben Edwards 
+       K-adjustments corresponding to model 04 - as prepared by Ben Edwards
        K-value for PGA were not provided but infered from SA[]0.01s]
        the model considers a fixed value of vs30=1100m/s
     2) small-magnitude correction
@@ -1825,27 +1838,29 @@ class CauzziFaccioli2008SWISS04T(CauzziFaccioli2008SWISS04):
     adjustement when computing the single station sigma (reported as total
     standard deviation))
     ------------------------------------------------------------------------
-    Disclaimer: these equations are modified to be used for the 
-    new Swiss Seismic Hazard Model [2014]. 
+    Disclaimer: these equations are modified to be used for the
+    new Swiss Seismic Hazard Model [2014].
     The use of these models is the soly responsability of the hazard modeler.
     --------------------------------------------------------------------
-    Model implmented by laurentiu.danciu@sed.ethz.ch 
+    Model implmented by laurentiu.danciu@sed.ethz.ch
     """
 
-    def get_mean_and_stddevs( self, sites, rup, dists, imt, stddev_types ):
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         Adjust the meadian value to the soil-type used for
         Swiss hazard Vs30=1100m/s
         """
         C_ADJ = self.COEFFS_PHI_SS[imt]
 
-        mean, stddevs = super( CauzziFaccioli2008SWISS04T, self ).get_mean_and_stddevs( sites, rup, dists, imt,stddev_types )
+        mean, stddevs = super(CauzziFaccioli2008SWISS04T, self).get_mean_and_stddevs(
+            sites, rup, dists, imt, stddev_types)
 
-        std_corr = self._get_corr_stddevs(self.COEFFS[imt], stddev_types,len(sites.vs30),C_ADJ['phi_ss']/np.log(10))
-        stddevs = np.log( 10 ** np.array( std_corr ) )
+        std_corr = self._get_corr_stddevs(
+            self.COEFFS[imt], stddev_types, len(sites.vs30), C_ADJ['phi_ss'] / np.log(10))
+        stddevs = np.log(10 ** np.array(std_corr))
         return mean, stddevs
 
-    def _get_corr_stddevs( self, C, stddev_types, num_sites,phi_ss):
+    def _get_corr_stddevs(self, C, stddev_types, num_sites, phi_ss):
         """
         Return standard deviations adjusted for single station sigma
         as proposed to be used in the new Swiss Hazard Model [2014].
@@ -1854,15 +1869,15 @@ class CauzziFaccioli2008SWISS04T(CauzziFaccioli2008SWISS04):
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(C['s_between_ev']**2 + phi_ss**2) + np.zeros(num_sites))
+                stddevs.append(
+                    np.sqrt(C['s_between_ev'] ** 2 + phi_ss ** 2) + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTRA_EVENT:
                 stddevs.append(np.log(C['s_within_ev']) + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTER_EVENT:
                 stddevs.append(np.log(C['s_between_ev']) + np.zeros(num_sites))
         return stddevs
 
-        return mean, stddevs
-    COEFFS_PHI_SS =      CoeffsTable( sa_damping = 5, table = """\
+    COEFFS_PHI_SS = CoeffsTable(sa_damping=5, table="""\
     IMT              phi_ss
     pga              0.460
     0.050            0.453
@@ -2066,13 +2081,16 @@ class CauzziFaccioli2008SWISS04T(CauzziFaccioli2008SWISS04):
     9.950            0.410
     10.000           0.410
     """)
+
+
 class CauzziFaccioli2008SWISS08T(CauzziFaccioli2008SWISS08):
+
     """
     --------------------------------------------------------------------
     This class implments an extension of the Cauzzi Faccioli(2008) model,
     adjusted to be used for the new Swiss Hazard Model [2014].
     1) kappa value
-       K-adjustments corresponding to model 08 - as prepared by Ben Edwards 
+       K-adjustments corresponding to model 08 - as prepared by Ben Edwards
        K-value for PGA were not provided but infered from SA[]0.01s]
        the model considers a fixed value of vs30=1100m/s
     2) small-magnitude correction
@@ -2083,26 +2101,29 @@ class CauzziFaccioli2008SWISS08T(CauzziFaccioli2008SWISS08):
     adjustement when computing the single station sigma (reported as total
     standard deviation))
     ------------------------------------------------------------------------
-    Disclaimer: these equations are modified to be used for the 
-    new Swiss Seismic Hazard Model [2014]. 
+    Disclaimer: these equations are modified to be used for the
+    new Swiss Seismic Hazard Model [2014].
     The use of these models is the soly responsability of the hazard modeler.
     --------------------------------------------------------------------
-    Model implmented by laurentiu.danciu@sed.ethz.ch 
+    Model implmented by laurentiu.danciu@sed.ethz.ch
     """
-    def get_mean_and_stddevs( self, sites, rup, dists, imt, stddev_types ):
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         Adjust the meadian value to the soil-type used for
         Swiss hazard Vs30=1100m/s
         """
         C_ADJ = self.COEFFS_PHI_SS[imt]
 
-        mean, stddevs = super( CauzziFaccioli2008SWISS08T, self ).get_mean_and_stddevs( sites, rup, dists, imt,stddev_types )
+        mean, stddevs = super(CauzziFaccioli2008SWISS08T, self).get_mean_and_stddevs(
+            sites, rup, dists, imt, stddev_types)
 
-        std_corr = self._get_corr_stddevs(self.COEFFS[imt], stddev_types,len(sites.vs30),C_ADJ['phi_ss']/np.log(10))
-        stddevs = np.log( 10 ** np.array( std_corr ) )
+        std_corr = self._get_corr_stddevs(
+            self.COEFFS[imt], stddev_types, len(sites.vs30), C_ADJ['phi_ss'] / np.log(10))
+        stddevs = np.log(10 ** np.array(std_corr))
         return mean, stddevs
 
-    def _get_corr_stddevs( self, C, stddev_types, num_sites,phi_ss):
+    def _get_corr_stddevs(self, C, stddev_types, num_sites, phi_ss):
         """
         Return standard deviations adjusted for single station sigma
         as proposed to be used in the new Swiss Hazard Model [2014].
@@ -2111,15 +2132,15 @@ class CauzziFaccioli2008SWISS08T(CauzziFaccioli2008SWISS08):
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(C['s_between_ev']**2 + phi_ss**2) + np.zeros(num_sites))
+                stddevs.append(
+                    np.sqrt(C['s_between_ev'] ** 2 + phi_ss ** 2) + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTRA_EVENT:
                 stddevs.append(np.log(C['s_within_ev']) + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTER_EVENT:
                 stddevs.append(np.log(C['s_between_ev']) + np.zeros(num_sites))
         return stddevs
 
-        return mean, stddevs
-    COEFFS_PHI_SS =      CoeffsTable( sa_damping = 5, table = """\
+    COEFFS_PHI_SS = CoeffsTable(sa_damping=5, table="""\
     IMT              phi_ss
     pga              0.460
     0.050            0.453
