@@ -1,0 +1,33 @@
+Metadata-Version: 1.1
+Name: openquake.hazardlib
+Version: 0.11.0
+Summary: hazardlib is a library for performing seismic hazard analysis
+Home-page: http://github.com/gem/oq-hazardlib
+Author: GEM
+Author-email: info@openquake.org
+License: GNU AGPL v3
+Description: 
+        hazardlib includes modules for modeling seismic sources (point, area and fault),
+        earthquake ruptures, temporal (e.g. Poissonian) and magnitude occurrence
+        models (e.g. Gutenberg-Richter), magnitude/area scaling relationships,
+        ground motion and intensity prediction equations (i.e. GMPEs and IPEs).
+        Eventually it will offer a number of calculators for hazard curves,
+        stochastic event sets, ground motion fields and disaggregation histograms.
+        
+        hazardlib aims at becoming an open and comprehensive tool for seismic hazard
+        analysis. The GEM Foundation (http://www.globalquakemodel.org/) supports
+        the development of the  library by adding the most recent methodologies
+        adopted by the seismological/seismic hazard communities. Comments,
+        suggestions and criticisms from the community are always very welcome.
+        
+        Copyright (C) 2012-2014, GEM Foundation.
+        
+Keywords: seismic hazard
+Platform: any
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Education
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: GNU Affero General Public License v3
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 2
+Classifier: Topic :: Scientific/Engineering
