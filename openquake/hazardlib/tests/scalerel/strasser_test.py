@@ -17,7 +17,7 @@
 
 from openquake.hazardlib.scalerel.strasser2010 import (StrasserInterface, 
                                                        StrasserIntraslab)
-from openquake.hazardlib.tests.scalrel.msr_test import BaseMSRTestCase 
+from openquake.hazardlib.tests.scalerel.msr_test import BaseMSRTestCase 
 
 class StrasserInterfaceTestCase(BaseMSRTestCase):
     '''
