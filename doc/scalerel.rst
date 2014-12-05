@@ -44,6 +44,12 @@ Strasser et al. 2010
 .. automodule:: openquake.hazardlib.scalerel.strasser2010
     :members:
 
+-------------------
+Bonilla et al. 1984
+-------------------
+
+.. automodule:: openquake.hazardlib.scalerel.bonilla1984
+    :members:
 
 --------------------------
 Abstract base relationship
