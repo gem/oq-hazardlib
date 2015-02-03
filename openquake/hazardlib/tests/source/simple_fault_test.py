@@ -296,8 +296,10 @@ class HypoLocRupture(unittest.TestCase):
         self.fault_trace = Line(self.fault_trace_nodes)
 
     def test_hypoloc_vertical_rupture(self):
+        source_id = name = 'test-source'
+        trt = TRT.ACTIVE_SHALLOW_CRUST
         hypo_list = numpy.array([[0.25, 0.25, 0.4], [0.75, 0.75, 0.6]])
-        src = SimpleFaultSource("test", "test", "Active Shallow Crust",
+        src = SimpleFaultSource(source_id, name, trt,
                                 self.src_mfd, self.mesh_spacing,
                                 self.sarea, 1., self.src_tom,
                                 self.upper_seismogenic_depth,
@@ -436,10 +438,12 @@ class HypoLocRupture(unittest.TestCase):
             self.assertAlmostEqual(rup.occurrence_rate, rate[i], delta=0.01)
 
     def test_hypoloc_dip_rupture(self):
+        source_id = name = 'test-source'
+        trt = TRT.ACTIVE_SHALLOW_CRUST
         dip = 30.
         hypo_list = numpy.array([[0.25, 0.25, 0.4], [0.75, 0.75, 0.6]])
         self.mesh_spacing = 5.
-        src = SimpleFaultSource("test", "test", "Active Shallow Crust",
+        src = SimpleFaultSource(source_id, name, trt,
                                 self.src_mfd, self.mesh_spacing, self.sarea,
                                 1., self.src_tom, self.upper_seismogenic_depth,
                                 self.lower_seismogenic_depth,
@@ -577,12 +581,14 @@ class HypoLocRupture(unittest.TestCase):
             self.assertAlmostEqual(rup.occurrence_rate, rate[i], delta=0.01)
 
     def test_hypoloc_multisegment_rupture_test(self):
+        source_id = name = 'test-source'
+        trt = TRT.ACTIVE_SHALLOW_CRUST
         hypo_list = numpy.array([[0.25, 0.25, 0.4], [0.75, 0.75, 0.6]])
         self.mesh_spacing = 5.
         self.fault_trace_nodes = [
             self.fault_trace_start, Point(0.3, 0.3), self.fault_trace_end]
         self.fault_trace = Line(self.fault_trace_nodes)
-        src = SimpleFaultSource("test", "test", "Active Shallow Crust",
+        src = SimpleFaultSource(source_id, name, trt,
                                 self.src_mfd, self.mesh_spacing,
                                 self.sarea, 1., self.src_tom,
                                 self.upper_seismogenic_depth,
