@@ -329,7 +329,7 @@ class BaseQuadrilateralSurface(BaseSurface):
             of the rupture plane would be input as (0.5, 0.5), whereas a
             hypocentre located in a position 3/4 along the length, and 1/4 of
             the way down dip of the rupture plane would be entered as
-            (0.75, 0.25)
+            (0.75, 0.25).
         :returns:
             Hypocentre location as instance of :class:
             `~openquake.hazardlib.geo.point.Point`
