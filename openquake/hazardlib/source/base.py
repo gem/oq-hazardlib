@@ -161,8 +161,10 @@ class ParametricSeismicSource(BaseSeismicSource):
         and vice versa.
     :param temporal_occurrence_model:
         Instance of
-        :class:`openquake.hazardlib.tom.PoissonTOM` defining temporal occurrence
-        model for calculating rupture occurrence probabilities
+        :class:`openquake.hazardlib.tom.PoissonTOM` defining temporal
+        occurrence model for calculating rupture occurrence probabilities
+    :param rupture_silp_direction:
+        Float number representing the rupture direction.
 
     :raises ValueError:
         If either rupture aspect ratio or rupture mesh spacing is not positive
@@ -176,7 +178,8 @@ class ParametricSeismicSource(BaseSeismicSource):
 
     def __init__(self, source_id, name, tectonic_region_type, mfd,
                  rupture_mesh_spacing, magnitude_scaling_relationship,
-                 rupture_aspect_ratio, temporal_occurrence_model):
+                 rupture_aspect_ratio, temporal_occurrence_model,
+                 rupture_silp_direction=None):
         super(ParametricSeismicSource, self). \
             __init__(source_id, name, tectonic_region_type)
 
