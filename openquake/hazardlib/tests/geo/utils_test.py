@@ -20,8 +20,56 @@ import shapely.geometry
 
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo import utils
+from openquake.hazardlib.geo.point import Point
 
 from openquake.hazardlib.tests import SpeedupsTestCase
+
+
+class CoordinateConversionTest(unittest.TestCase):
+    def test_get_xyz_from_ll(self):
+
+        lon_ref = 4.0
+        lat_ref = 6.0
+        dep1 = 0.0
+        lonp = 5.0
+        latp = 6.0
+        dep2 = 0.0
+        xs, ys, zs = utils.get_xyz_from_ll(lonp, latp, dep1,
+                                           lon_ref, lat_ref, dep2)
+        # The value used for this test is computed using this website
+        # http://www.movable-type.co.uk/scripts/latlong.html
+        self.assertAlmostEqual(xs, 111.2, delta=2.0)
+        self.assertAlmostEqual(ys, 0.1, delta=2.0)
+        self.assertAlmostEqual(zs, 0.0, delta=2.0)
+
+
+class PlaneEquationTest(unittest.TestCase):
+    def test_get_plane_equation(self):
+
+        point1 = Point(1, 0, 0)
+        point2 = Point(1, 1, 2)
+        point3 = Point(2, 1, 3)
+        hypo = Point(0, 0, 0)
+        nrm, dst = utils.get_plane_equation(point1, point2, point3, hypo)
+        # The value used for this test is computed using this website
+        # http://keisan.casio.com/exec/system/1223596129 (first,
+        # coverted to xyz coordinate)
+
+        self.assertAlmostEqual(dst, -12361.172665611, delta=1)
+        self.assertAlmostEqual(nrm[0], -111.16669652676, delta=0.1)
+        self.assertAlmostEqual(nrm[1], -222.37855646024, delta=0.1)
+        self.assertAlmostEqual(nrm[2], -12363.683697019, delta=0.1)
+
+
+class VectorTest(unittest.TestCase):
+    def test_angle_two_vectors(self):
+        v1 = numpy.array([3., 4., 0.])
+        v2 = numpy.array([-8., 6., 0.])
+        angle = utils.vectors2angle(v1, v2)
+        # The value used for this test is computed using this website
+        # http://www.vitutor.com/geometry/vec/angle_vectors.html
+        # we take the value and convert to radian.
+        self.assertAlmostEqual(angle, 1.5708, delta=0.1)
 
 
 class CleanPointTestCase(unittest.TestCase):
@@ -79,6 +127,7 @@ class LineIntersectsItselfTestCase(unittest.TestCase):
         lons = [178, 178, 179, -178]
         lats = [0, 10, 5, 5]
         self.assertEqual(False, self.func(lons, lats))
+
 
 class GetLongitudinalExtentTestCase(unittest.TestCase):
     def test_positive(self):

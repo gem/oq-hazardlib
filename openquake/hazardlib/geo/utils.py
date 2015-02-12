@@ -19,10 +19,12 @@ to several geographical primitives and some other low-level spatial operations.
 """
 import numpy
 import shapely.geometry
+import math
 
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo.geodetic import EARTH_RADIUS
 from openquake.hazardlib.slots import with_slots
+from openquake.hazardlib.geo import geodetic as geod
 
 
 def clean_points(points):
@@ -125,6 +127,107 @@ def get_spherical_bounding_box(lons, lats):
             raise ValueError('points collection has longitudinal extent '
                              'wider than 180 deg')
     return west, east, north, south
+
+
+def get_plane_equation(p0, p1, p2, hypocenter):
+    """
+    Define plane equation by 3 given points, p0, p1, p2, which format in
+    class:`~openquake.hazardlib.geo.point.Point` object
+
+    :param p0:
+        :class:`~openquake.hazardlib.geo.point.Point` object
+        representing the location of the one vertex of the fault patch.
+    :param p1:
+        :class:`~openquake.hazardlib.geo.point.Point` object
+        representing the location of the one vertex of the fault patch.
+        Note: the order of the vertex should give
+        in clockwise.
+    :param p2:
+        :class:`~openquake.hazardlib.geo.point.Point` object
+        representing the location of the one vertex of the fault patch.
+        Note: the order of the vertex should give
+        in clockwise.
+    :param hypocenter:
+        :class:`~openquake.hazardlib.geo.point.Point` object
+        representing the location of hypocenter
+    :returns:
+        normal: normal vector of the plane (a,b,c)
+        dist_to_plane: d in the plane equation, ax + by + cz = d
+    """
+    p0_xyz = get_xyz_from_ll(p0.longitude, p0.latitude, p0.depth,
+                             hypocenter.longitude, hypocenter.latitude,
+                             hypocenter.depth)
+    p1_xyz = get_xyz_from_ll(p1.longitude, p1.latitude, p1.depth,
+                             hypocenter.longitude, hypocenter.latitude,
+                             hypocenter.depth)
+    p2_xyz = get_xyz_from_ll(p2.longitude, p2.latitude, p2.depth,
+                             hypocenter.longitude, hypocenter.latitude,
+                             hypocenter.depth)
+
+    p0 = numpy.array(p0_xyz)
+    p1 = numpy.array(p1_xyz)
+    p2 = numpy.array(p2_xyz)
+
+    u = p1 - p0
+    v = p2 - p0
+
+    # vector normal to plane, ax+by+cy = d, normal=(a,b,c)
+
+    normal = numpy.cross(u, v)
+
+    # Define the d for the plane equation
+    dist_to_plane = numpy.dot(p0, normal)
+
+    return normal, dist_to_plane
+
+
+def get_xyz_from_ll(lons, lats, deps, ref_lon, ref_lat, ref_dep):
+    """
+    This method computes the x ,y and z coordinates of a set of points provided
+    a reference point
+
+    :param lons:
+        Longitudes of the points for which we want to calculate the projected
+        coordinates
+    :param lats:
+        Latitudes of the points for which we want to calculate the projected
+        coordinates
+    :param deps:
+        Depths of the points for which we want to calculate the projected
+        coordinates
+    :param ref_lon:
+        Longitude of the reference point
+    :param ref_lat:
+        Latitude of the reference point
+    :param ref_dep:
+        Dep of the reference point
+    :returns:
+            x
+            y
+            z
+    """
+    azims = geod.azimuth(ref_lon, ref_lat, lons, lats)
+    depths = numpy.subtract(ref_dep, deps)
+    dists = geod.geodetic_distance(ref_lon, ref_lat, lons, lats)
+    return (dists * math.sin(math.radians(azims)),
+            dists * math.cos(math.radians(azims)),
+            depths)
+
+
+def vectors2angle(v1, v2):
+    """
+    Returns the angle in radians between vectors 'v1' and 'v2'.
+
+    :param v1:
+        vector, format in numpy array
+    :param v2:
+        vector, format in numpy array
+    :return:
+        the angle in radians between the two vetors
+    """
+    cosang = numpy.dot(v1, v2)
+    sinang = numpy.linalg.norm(numpy.cross(v1, v2))
+    return numpy.arctan2(sinang, cosang)
 
 
 @with_slots
