@@ -1,5 +1,5 @@
   [Yen-Shin Chen]
-  * Rupture: fix one bug in get_cdppvalue
+  * Rupture: fix one bug in get_dppvalue
 
   [Matteo Nastasi]
   * Packaging system improvement
