@@ -120,7 +120,7 @@ class Polygon(object):
         If any of them are `None`, recalculate all of them.
         """
         if (self._polygon2d is None or self._projection is None
-            or self._bbox is None):
+                or self._bbox is None):
             # resample polygon line segments:
             lons, lats = get_resampled_coordinates(self.lons, self.lats)
 

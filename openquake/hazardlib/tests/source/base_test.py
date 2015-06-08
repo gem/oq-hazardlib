@@ -60,6 +60,7 @@ class _BaseSeismicSourceTestCase(unittest.TestCase):
                                  rupture_aspect_ratio=1,
                                  temporal_occurrence_model=PoissonTOM(50.))
         self.sitecol = SiteCollection(self.SITES)
+        self.sitepoly = self.sitecol.mesh.get_convex_hull()._polygon2d
 
 
 class SeismicSourceGetAnnOccRatesTestCase(_BaseSeismicSourceTestCase):
@@ -93,6 +94,8 @@ class SeismicSourceFilterSitesTestCase(_BaseSeismicSourceTestCase):
         self.source.get_rupture_enclosing_polygon = get_rup_encl_poly
 
     def test_source_filter_zero_integration_distance(self):
+        self.assertTrue(self.source.is_within(0, self.sitepoly))
+
         filtered = self.source.filter_sites_by_distance_to_source(
             integration_distance=0, sites=self.sitecol
         )
@@ -102,6 +105,8 @@ class SeismicSourceFilterSitesTestCase(_BaseSeismicSourceTestCase):
         numpy.testing.assert_array_equal(filtered.vs30, [0.1, 5, 6, 7, 8])
 
     def test_source_filter_half_km_integration_distance(self):
+        self.assertTrue(self.source.is_within(0.5, self.sitepoly))
+
         filtered = self.source.filter_sites_by_distance_to_source(
             integration_distance=0.5, sites=self.sitecol
         )
@@ -109,6 +114,8 @@ class SeismicSourceFilterSitesTestCase(_BaseSeismicSourceTestCase):
                                          [0, 1, 2, 3, 4, 5, 6, 7, 8])
 
     def test_source_filter_fifty_km_integration_distance(self):
+        self.assertTrue(self.source.is_within(50, self.sitepoly))
+
         filtered = self.source.filter_sites_by_distance_to_source(
             integration_distance=50, sites=self.sitecol
         )
@@ -116,6 +123,8 @@ class SeismicSourceFilterSitesTestCase(_BaseSeismicSourceTestCase):
                                          [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 
     def test_source_filter_thousand_km_integration_distance(self):
+        self.assertTrue(self.source.is_within(1000, self.sitepoly))
+
         filtered = self.source.filter_sites_by_distance_to_source(
             integration_distance=1000, sites=self.sitecol
         )

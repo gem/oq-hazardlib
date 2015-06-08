@@ -20,6 +20,8 @@ python-oq-hazardlib (0.14.0-0~precise01) precise; urgency=low
     and Ubuntu 14.04 (Trusty)
 
   [Michele Simionato]
+  * Added a method "is_within" to the sources, to check efficiently if a
+    source is close to a geometric object
   * Introduced a compact representation of the GMFs as a single array
 
   [Graeme Weatherill]

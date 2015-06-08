@@ -132,6 +132,20 @@ class BaseSeismicSource(object):
         rup_enc_poly = self.get_rupture_enclosing_polygon(integration_distance)
         return sites.filter(rup_enc_poly.intersects(sites.mesh))
 
+    def is_within(self, integration_distance, shapely_object):
+        """
+        :param integration_distance:
+            distance used to generate the rupture enclosing polygon
+        :param shapely_object:
+            typically the convex hull of the mesh representing the sites
+        :returns:
+            True if the rupture enclosing polygon intersects the shapely
+            object, False otherwise.
+        """
+        rup_enc_poly = self.get_rupture_enclosing_polygon(integration_distance)
+        return (rup_enc_poly._polygon2d is not None and
+                rup_enc_poly._polygon2d.intersects(shapely_object))
+
 
 @with_slots
 class ParametricSeismicSource(BaseSeismicSource):
