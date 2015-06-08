@@ -196,6 +196,18 @@ class GroundShakingIntensityModel(object):
     #:     Direct point parameter for directivity effect centered on the site- and earthquake-specific
     #      average DPP used. See:
     #:     See :meth:`~openquake.hazardlib.source.rupture.ParametricProbabilisticRupture.get_dppvalue`.
+    #: ``rs``
+    #:     Rupture fraction distance for directivity effect on the site. See:
+    #:     See :meth:`~openquake.hazardlib.source.rupture.ParametricProbabilisticRupture.get_rupture_fraction_strikeslip`.
+    #: ``rtheta``
+    #:     The angel between the rupture slip direction and the path to the site with respect to the rupture
+    #:     See :meth:`~openquake.hazardlib.source.rupture.ParametricProbabilisticRupture.get_rupture_fraction_strikeslip`.
+    #: ``rd``
+    #:     Rupture fraction distance for directivity effect on the site. See:
+    #:     See :meth:`~openquake.hazardlib.source.rupture.ParametricProbabilisticRupture.get_rupture_fraction_dipslip`.
+    #: ``rphi``
+    #:     The angel between the rupture slip direction and the path to the site with respect to the rupture
+    #:     See :meth:`~openquake.hazardlib.source.rupture.ParametricProbabilisticRupture.get_rupture_fraction_dipslip`.
     #:
     #: All the distances are available from the :class:`DistancesContext`
     #: object attributes with same names. Values are in kilometers.
@@ -475,6 +487,18 @@ class GroundShakingIntensityModel(object):
                 )
             elif param == 'rcdpp':
                 dist = rupture.get_cdppvalue(site_collection.mesh)
+            elif param == 'rs':
+                dist = rupture.get_rupture_fraction_strikeslip(
+                    site_collection.mesh, angle=False)
+            elif param == 'rtheta':
+                dist = rupture.get_rupture_fraction_strikeslip(
+                    site_collection.mesh, angle=True)
+            elif param == 'rd':
+                dist = rupture.get_rupture_fraction_dipslip(
+                    site_collection.mesh, angle=False)
+            elif param == 'rphi':
+                dist = rupture.get_rupture_fraction_dipslip(
+                    site_collection.mesh, angle=True)
             else:
                 raise ValueError('%s requires unknown distance measure %r' %
                                  (type(self).__name__, param))
@@ -757,7 +781,7 @@ class SitesContext(BaseContext):
     object.
     """
     __slots__ = ('vs30', 'vs30measured', 'z1pt0', 'z2pt5', 'backarc',
-        'lons', 'lats')
+                 'lons', 'lats')
 
 
 class DistancesContext(BaseContext):
@@ -772,7 +796,9 @@ class DistancesContext(BaseContext):
     does it need. Only those required values are calculated and made available
     in a result context object.
     """
-    __slots__ = ('rrup', 'rx', 'rjb', 'rhypo', 'repi', 'ry0', 'rcdpp')
+    __slots__ = (
+        'rrup', 'rx', 'rjb', 'rhypo', 'repi', 'ry0', 'rcdpp', 'rs',
+        'rtheta', 'rd', 'rphi')
 
 
 class RuptureContext(BaseContext):

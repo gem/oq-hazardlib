@@ -1,3 +1,6 @@
+  [Yen-Shin Chen]
+  * Rupture: fix one bug in get_dppvalue for multi-segment case
+
   [Matteo Nastasi]
   * Packaging system improvement
 
