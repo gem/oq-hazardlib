@@ -161,7 +161,7 @@ class Mesh(object):
 
         Uses :func:`openquake.hazardlib.geo.geodetic.min_distance`.
         """
-        return self._geodetic_min_distance(mesh, indices=False)
+        return self.geodetic_min_distance(mesh, indices=False)
 
     def get_joyner_boore_distance(self, mesh):
         """
@@ -256,13 +256,13 @@ class Mesh(object):
         and uses the same :func:`openquake.hazardlib.geo.geodetic.min_distance`
         internally.
         """
-        idxs = self._geodetic_min_distance(mesh, indices=True)
+        idxs = self.geodetic_min_distance(mesh, indices=True)
         lons = self.lons.take(idxs)
         lats = self.lats.take(idxs)
         depths = None if self.depths is None else self.depths.take(idxs)
         return Mesh(lons, lats, depths)
 
-    def _geodetic_min_distance(self, mesh, indices):
+    def geodetic_min_distance(self, mesh, indices):
         """
         Wrapper around :func:`openquake.hazardlib.geo.geodetic.min_distance`
         for two meshes: either (or both, or neither) can have empty depths.

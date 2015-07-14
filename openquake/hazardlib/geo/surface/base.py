@@ -430,21 +430,29 @@ class BaseQuadrilateralSurface(BaseSurface):
 
         return mesh.get_middle_point()
 
-    def get_resampled_top_edge(self, angle_var=0.1):
+    def get_resampled_top_edge(self, return_top_edge_index=False, angle_var=0.1):
         """
         This methods computes a simplified representation of a fault top edge
         by removing the points that are not describing a change of direction,
         provided a certain tolerance angle.
 
+        :param return_top_edge_index:
+            If ``True`` , the indices of the top edge on the rupture mesh are
+            return.
         :param float angle_var:
             Number representing the maximum deviation (in degrees) admitted
             without the creation of a new segment
         :returns:
-            A :class:`~openquake.hazardlib.geo.line.Line` representing the
-            rupture surface's top edge.
+            line_top_edge, an instance
+            :class:`~openquake.hazardlib.geo.line.Line`
+            representing the rupture surface's top edge.
+            top_edge_index, a numpy array of floats represents the indices of
+            the top edge on the rupture mesh(only be return when
+            return_top_edge_index is ``True``).
         """
         mesh = self.get_mesh()
         top_edge = [Point(mesh.lons[0][0], mesh.lats[0][0], mesh.depths[0][0])]
+        top_edge_index = [0]
 
         for i in range(len(mesh.triangulate()[1][0]) - 1):
             v1 = numpy.asarray(mesh.triangulate()[1][0][i])
@@ -459,9 +467,17 @@ class BaseQuadrilateralSurface(BaseSurface):
                                       mesh.lats[0][i + 1],
                                       mesh.depths[0][i + 1]))
 
+                top_edge_index.append(i)
+                top_edge.append(Point(mesh.lons[0][-1],
+                                mesh.lats[0][-1], mesh.depths[0][-1]))
+                line_top_edge = Line(top_edge)
+
         top_edge.append(Point(mesh.lons[0][-1],
                               mesh.lats[0][-1], mesh.depths[0][-1]))
         line_top_edge = Line(top_edge)
+        if return_top_edge_index:
+            top_edge_index.append(len(mesh.lons[0]) - 1)
+            return line_top_edge, top_edge_index
 
         return line_top_edge
 
