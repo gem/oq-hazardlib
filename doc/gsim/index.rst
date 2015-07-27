@@ -54,6 +54,7 @@ Built-in GSIMs
     frankel_1996
     fukushima_tanaka_1990
     garcia_2005
+    gsc_canada_2015
     geomatrix_1993
     ghofrani_atkinson_2014
     idriss_2014
@@ -94,6 +95,10 @@ Intensity models
     :private-members:
 
 .. autoclass:: IPE
+    :members:
+    :private-members:
+
+.. autoclass:: GMPETable
     :members:
     :private-members:
 

@@ -3,6 +3,10 @@
   * hazardlib now requires h5py
 
   [Graeme Weatherill]
+  * Adds GSIM object for use with GMPE tables
+  * Implements the full suite of GMPES needed for the 2015 Canadian National Seismic Hazard Model
+  
+  [Graeme Weatherill]
   * Adds Atkinson & Macias (2009) Subduction Interface GMPE
 
   [Yen-Shin Chen]

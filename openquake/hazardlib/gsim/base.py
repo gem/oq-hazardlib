@@ -26,8 +26,10 @@ import warnings
 import functools
 import contextlib
 
+import h5py
 import scipy.stats
 from scipy.special import ndtr
+from scipy.interpolate import interp1d
 import numpy
 
 from openquake.hazardlib import const
@@ -1006,3 +1008,180 @@ class CoeffsTable(object):
             (co, (min_above[co] - max_below[co]) * ratio + max_below[co])
             for co in max_below
         )
+
+
+class GMPETable(GMPE):
+    """
+    Prototype class for a generic GMPE table (excluding site class).
+
+    In a GMPE tables the expected ground motions for each of the IMTs over the
+    range of magnitudes and distances are stored in an hdf5 file on the path
+    specified by the user.
+
+    In this version of the GMPE the expected values are interpolated to the
+    required IMT, magnitude and distance in three stages.
+    
+    i) Initially the correct IMT values are identified, interpolating in
+       log-T|log-IML space between neighbouring spectral periods.
+
+    ii) The IML values are then interpolated to the correct magnitude using
+       linear-M|log-IML space
+
+    iii) The IML values are then interpolated to the correct distance via
+       linear-D|linear-IML interpolation
+
+    This can be used for the Canadian National Seismic Hazard Map
+    """
+    DEFINED_FOR_TECTONIC_REGION_TYPE = ""
+
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set(())
+
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = ""
+
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = [const.StdDev.TOTAL]
+
+    REQUIRES_SITES_PARAMETERS = set(())
+
+    REQUIRES_DISTANCES = set(())
+
+    REQUIRES_RUPTURE_PARAMETERS = set(("mag",))
+
+    GMPE_TABLE = None
+
+    def __init__(self, gmpe_table=None):
+        """
+        Instantiate - either with a GMPE table or otherwise it will take
+        the GMPE table defined
+        """
+        if not self.GMPE_TABLE:
+            if gmpe_table:
+                self.GMPE_TABLE = gmpe_table
+            else:
+                raise IOError("GMPE Table Not Defined!")
+
+        fle = h5py.File(self.GMPE_TABLE, "r")
+        self.REQUIRES_DISTANCES.clear()
+        self.REQUIRES_DISTANCES.update(set(fle["Distances"].keys()))
+        fle.close()
+
+    def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
+        """
+        Returns the mean and standard deviations
+        """
+        # Open data file
+        fle = h5py.File(self.GMPE_TABLE, "r")
+        # Return Distance Tables
+        imls = self._return_distance_tables(fle, rctx.mag, imt, "IMLs")
+        distances, key = self._get_distances(fle, dctx, rctx.mag)
+        mean = self._get_mean(imls, key, dctx, distances)
+        stddevs = self._get_stddevs(fle, distances, key, rctx.mag, dctx, imt,
+                                    stddev_types)
+
+        fle.close()
+        return numpy.log(mean), stddevs
+
+    def _get_mean(self, data, key, dctx, distances):
+        """
+        Returns the mean intensity measure level from the tables
+        :param numpy.ndarray data:
+            The intensity measure level vector for the given magnitude and IMT
+        :param str key:
+            The distance type
+        :param numpy.ndrray distances:
+            The distance vector for the given magnitude and IMT
+        """
+        interpolator_mean = interp1d(distances[key], data,
+                                     bounds_error=False,
+                                     fill_value=-999.)
+        mean = interpolator_mean(getattr(dctx, key))
+        # For those distances less than or equal to the shortest distance
+        # extrapolate the shortest distance value
+        mean[getattr(dctx, key) < (distances[key][0] + 1.0E-3)] = data[0]
+        # For those distances significantly greater than the furthest distance
+        # set to 1E-20.
+        mean[getattr(dctx, key) > (distances[key][-1] + 1.0E-3)] = 1E-20
+        # If any distance is between the final distance and a margin of 0.001
+        # km then assign to smallest distance
+        mean[mean < -1.] = data[-1]
+        return mean
+
+    def _get_stddevs(self, fle, distances, key, mag, dctx, imt, stddev_types):
+        """
+        Returns the total standard deviation of the intensity measure level
+        from the tables
+        :param fle:
+            HDF5 data stream as instance of :class: h5py.File
+        :param numpy.ndrray distances:
+            The distance vector for the given magnitude and IMT
+        :param str key:
+            The distance type
+        :param float mag:
+            The rupture magnitude
+        """
+        stddevs = []
+        for stddev_type in stddev_types:
+            if not stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES:
+                raise ValueError("Standard Deviation type %s not supported"
+                                 % stddev_type)
+            sigma = self._return_distance_tables(fle,
+                                                 mag,
+                                                 imt,
+                                                 stddev_type)
+            interpolator_std = interp1d(distances[key], sigma,
+                                        bounds_error=False)
+            stddev = interpolator_std(getattr(dctx, key))
+            stddev[getattr(dctx, key) < distances[key][0]] = sigma[0]
+            stddev[getattr(dctx, key) > distances[key][-1]] = sigma[-1]
+            stddevs.append(stddev)
+        return stddevs
+
+    def _get_distances(self, fle, dctx, mag):
+        """
+        Returns the distance vector from the tables for a specific magnitude
+        """
+        distances = {}
+        idx = numpy.searchsorted(fle["Mw"][:], mag)
+        for key in self.REQUIRES_DISTANCES:
+            dist_table = fle["Distances/" + key][:, 0, idx - 1]
+            distances[key] = dist_table.flatten()
+        return distances, key
+
+    def _return_distance_tables(self, fle, mag, imt, val_type):
+        """
+        Returns the vector of ground motions or standard deviations
+        corresponding to the specific magnitude and intensity measure type.
+        :param str val_type:
+            String indicating the type of data {"IMLs", "Total", "Inter" etc}
+        """
+        imls_t = "/".join([val_type, "T"])
+        imls_iml = "/".join([val_type, "SA"])
+        mw_vector = fle["Mw/"][:]
+        if isinstance(imt, (imt_module.PGA, imt_module.PGV)):
+            # Get scalar imt
+            iml_table = fle["/".join([val_type, str(imt)])][:]
+            n_d, n_s, n_m = iml_table.shape
+            iml_table = iml_table.reshape([n_d, n_m])
+        else:
+            periods = fle[imls_t][:]
+            low_period = round(periods[0], 7)
+            high_period = round(periods[-1], 7)
+            iml_table = fle[imls_iml][:]
+            if imt.period < low_period or imt.period > high_period:
+                raise ValueError("Spectral period %.3f outside of valid range "
+                                 "(%.3f to %.3f)" % (imt.period, periods[0],
+                                                     periods[-1]))
+            # Apply log-log interpolation for spectral period
+            interpolator = interp1d(numpy.log10(periods),
+                                    numpy.log10(iml_table),
+                                    axis=1)
+            iml_table = 10. ** interpolator(numpy.log10(imt.period))
+        # Get magnitude values
+        m_idx = numpy.searchsorted(mw_vector, mag)
+        if mag < mw_vector[0] or mag > mw_vector[-1]:
+            raise ValueError("Magnitude %.2f outside of supported range "
+                             "(%.2f to %.2f)" % (mag, mw_vector[0],
+                                                 mw_vector[1]))
+        # It is assumed that log10 of the spectral acceleration scales
+        # linearly (or approximately linearly) with magnitude
+        m_interpolator = interp1d(mw_vector, numpy.log10(iml_table), axis=1)
+        return 10.0 ** m_interpolator(mag)
