@@ -34,6 +34,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib import imt as imt_module
 from openquake.baselib.general import DeprecationWarning
 from openquake.baselib.python3compat import with_metaclass
+from openquake.baselib.slots import with_slots
 
 
 class NonInstantiableError(Exception):
@@ -754,38 +755,18 @@ class IPE(GroundShakingIntensityModel):
         return numpy.array(values, dtype=float)
 
 
-class BaseContext(with_metaclass(abc.ABCMeta)):
-    """
-    Base class for context object.
-    """
-
-    def __eq__(self, other):
-        """
-        Return True if ``other`` has same attributes with same values.
-        """
-        if isinstance(other, self.__class__):
-            if self._slots_ == other._slots_:
-                self_other = [
-                    numpy.all(
-                        getattr(self, s, None) == getattr(other, s, None)
-                    )
-                    for s in self._slots_
-                ]
-                return numpy.all(self_other)
-
-        return False
-
-
-class SitesContext(BaseContext):
+@with_slots
+class SitesContext(object):
     """
     Sites calculation context for ground shaking intensity models.
-    Used only in the tests to mock a SiteCollection object.
+    Used in the tests and in check_gsim to mock a SiteCollection object.
     """
-    #_slots_ = ('vs30', 'vs30measured', 'z1pt0', 'z2pt5', 'backarc',
-    #           'lons', 'lats')
+    _slots_ = ('vs30', 'vs30measured', 'z1pt0', 'z2pt5', 'backarc',
+               'lons', 'lats')
 
 
-class DistancesContext(BaseContext):
+@with_slots
+class DistancesContext(object):
     """
     Distances context for ground shaking intensity models.
 
@@ -801,7 +782,8 @@ class DistancesContext(BaseContext):
                'azimuth', 'hanging_wall')
 
 
-class RuptureContext(BaseContext):
+@with_slots
+class RuptureContext(object):
     """
     Rupture calculation context for ground shaking intensity models.
 

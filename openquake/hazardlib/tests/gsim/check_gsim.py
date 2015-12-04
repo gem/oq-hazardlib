@@ -29,9 +29,9 @@ import copy
 import numpy
 
 from openquake.hazardlib import const
-from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel, IPE
-from openquake.hazardlib.gsim.base import RuptureContext, DistancesContext
+from openquake.hazardlib.gsim.base import (
+    SitesContext, RuptureContext, DistancesContext)
 from openquake.hazardlib.imt import PGA, PGV, PGD, SA, CAV, MMI
 
 
@@ -64,7 +64,7 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
     linenum = 1
     discrepancies = []
     started = time.time()
-    for testcase in _parse_csv(datafile, debug):
+    for testcase in _parse_csv(datafile, debug, gsim):
         linenum += 1
         (sctx, rctx, dctx, stddev_types, expected_results, result_type) \
             = testcase
@@ -169,7 +169,7 @@ context objects changed = %s'''
     return stats
 
 
-def _parse_csv(datafile, debug):
+def _parse_csv(datafile, debug, gsim):
     """
     Parse a data file in csv format and generate everything needed to exercise
     GSIM and check the result.
@@ -179,6 +179,8 @@ def _parse_csv(datafile, debug):
     :param debug:
         If ``False``, parser will try to combine several subsequent rows from
         the data file into one vectorized call.
+    :param gsim:
+        The GSIM class
     :returns:
         A generator of tuples of :func:`_parse_csv_line` result format.
     """
@@ -186,7 +188,7 @@ def _parse_csv(datafile, debug):
     headers = [param_name.lower() for param_name in next(reader)]
     sctx, rctx, dctx, stddev_types, expected_results, result_type \
         = _parse_csv_line(headers, next(reader))
-    sattrs = SiteCollection._slots_
+    sattrs = gsim.REQUIRES_SITES_PARAMETERS
     dattrs = [slot for slot in DistancesContext._slots_
               if hasattr(dctx, slot)]
     for line in reader:
@@ -313,7 +315,7 @@ if __name__ == '__main__':
     import argparse
 
     def gsim_by_import_path(import_path):
-        if not '.' in import_path:
+        if '.' not in import_path:
             raise argparse.ArgumentTypeError(
                 '%r is not well-formed import path' % import_path
             )
