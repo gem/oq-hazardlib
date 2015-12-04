@@ -198,7 +198,7 @@ def hazard_curves_per_trt(
             for rupture, r_sites in rupture_sites:
                 with ctx_mon:
                     try:
-                        sctx, rctx, dctx = cmaker.make_contexts(
+                        sites, rctx, dctx = cmaker.make_contexts(
                             r_sites, rupture)
                     except FarAwayRupture:
                         continue
@@ -206,10 +206,10 @@ def hazard_curves_per_trt(
                     with pne_mon:
                         for imt in imts:
                             poes = gsim.get_poes(
-                                sctx, rctx, dctx, imt, imts[imt],
+                                sites, rctx, dctx, imt, imts[imt],
                                 truncation_level)
                             pno = rupture.get_probability_no_exceedance(poes)
-                            expanded_pno = sctx.sites.expand(pno, 1.0)
+                            expanded_pno = sites.expand(pno, 1.0)
                             curves[i][str(imt)] *= expanded_pno
         except Exception as err:
             etype, err, tb = sys.exc_info()

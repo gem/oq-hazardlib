@@ -29,9 +29,9 @@ import copy
 import numpy
 
 from openquake.hazardlib import const
+from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel, IPE
-from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
-                                           DistancesContext)
+from openquake.hazardlib.gsim.base import RuptureContext, DistancesContext
 from openquake.hazardlib.imt import PGA, PGV, PGD, SA, CAV, MMI
 
 
@@ -186,7 +186,7 @@ def _parse_csv(datafile, debug):
     headers = [param_name.lower() for param_name in next(reader)]
     sctx, rctx, dctx, stddev_types, expected_results, result_type \
         = _parse_csv_line(headers, next(reader))
-    sattrs = [slot for slot in SitesContext._slots_ if hasattr(sctx, slot)]
+    sattrs = SiteCollection._slots_
     dattrs = [slot for slot in DistancesContext._slots_
               if hasattr(dctx, slot)]
     for line in reader:

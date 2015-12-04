@@ -189,30 +189,16 @@ class ContextMaker(object):
 
     def make_sites_context(self, site_collection):
         """
-        Create context objects for given site collection
-
-        :param site_collection:
-            Instance of :class:`openquake.hazardlib.site.SiteCollection`.
-
-        :returns:
-            Site parameters as instance of :class:
-            `SitesContext()`. Only those  values that are required by GSIM
-            are filled in this context.
-
-        :raises ValueError:
-            If any of declared required site parameters is unknown.
-
+        Check that the site_collection contains all the
+        REQUIRES_SITES_PARAMETERS. Returns the site_collection unchanged.
         """
-        sctx = SitesContext()
-        sctx.sites = site_collection
         for param in self.REQUIRES_SITES_PARAMETERS:
             try:
-                value = getattr(site_collection, param)
+                getattr(site_collection, param)
             except AttributeError:
                 raise ValueError('%s requires unknown site parameter %r' %
                                  (type(self).__name__, param))
-            setattr(sctx, param, value)
-        return sctx
+        return site_collection
 
     def make_rupture_context(self, rupture):
         """
@@ -271,9 +257,9 @@ class ContextMaker(object):
             :class:`openquake.hazardlib.source.rupture.BaseProbabilisticRupture`
 
         :returns:
-            Tuple of three items: sites context, rupture context and
+            Tuple of three items: site collection, rupture context and
             distances context, that is, instances of
-            :class:`SitesContext`, :class:`RuptureContext` and
+            :class:`SiteCollection`, :class:`RuptureContext` and
             :class:`DistancesContext` in a specified order. Only those
             values that are required by GSIM are filled in in
             contexts.
@@ -341,8 +327,6 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
     #: Set of site parameters names this GSIM needs. The set should include
     #: strings that match names of the attributes of a :class:`site
     #: <openquake.hazardlib.site.Site>` object.
-    #: Those attributes are then available in the
-    #: :class:`SitesContext` object with the same names.
     REQUIRES_SITES_PARAMETERS = abc.abstractproperty()
 
     #: Set of rupture parameters (excluding distance information) required
@@ -398,10 +382,8 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
         Method must be implemented by subclasses.
 
         :param sites:
-            Instance of :class:`SitesContext` with parameters of sites
+            Instance of :class:`SiteCollection` with parameters of sites
             collection assigned to respective values as numpy arrays.
-            Only those attributes that are listed in class'
-            :attr:`REQUIRES_SITES_PARAMETERS` set are available.
         :param rup:
             Instance of :class:`RuptureContext` with parameters of a rupture
             assigned to respective values. Only those attributes that are
@@ -449,7 +431,7 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
         for one or more pairs "site -- rupture".
 
         :param sctx:
-            An instance of :class:`SitesContext` with sites information
+            An instance of :class:`SiteCollection` with sites information
             to calculate PoEs on.
         :param rctx:
             An instance of :class:`RuptureContext` with a single rupture
@@ -797,17 +779,10 @@ class BaseContext(with_metaclass(abc.ABCMeta)):
 class SitesContext(BaseContext):
     """
     Sites calculation context for ground shaking intensity models.
-
-    Instances of this class are passed into
-    :meth:`GroundShakingIntensityModel.get_mean_and_stddevs`. They are
-    intended to represent relevant features of the sites collection.
-    Every GSIM class is required to declare what :attr:`sites parameters
-    <GroundShakingIntensityModel.REQUIRES_SITES_PARAMETERS>` does it need.
-    Only those required parameters are made available in a result context
-    object.
+    Used only in the tests to mock a SiteCollection object.
     """
-    _slots_ = ('vs30', 'vs30measured', 'z1pt0', 'z2pt5', 'backarc',
-               'lons', 'lats')
+    #_slots_ = ('vs30', 'vs30measured', 'z1pt0', 'z2pt5', 'backarc',
+    #           'lons', 'lats')
 
 
 class DistancesContext(BaseContext):

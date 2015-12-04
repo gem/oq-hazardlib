@@ -127,6 +127,10 @@ class SiteCollection(object):
     :param sites:
         A list of instances of :class:`Site` class.
     """
+
+    _slots_ = ('vs30', 'vs30measured', 'z1pt0', 'z2pt5', 'backarc',
+               'lons', 'lats')
+
     @classmethod
     def from_points(cls, lons, lats, site_ids, sitemodel):
         """
@@ -286,7 +290,6 @@ for name in 'vs30 vs30measured z1pt0 z2pt5 backarc'.split():
     setattr(SiteCollection, name, property(getarray, doc='%s array' % name))
 
 
-@with_slots
 class FilteredSiteCollection(object):
     """
     A class meant to store proper subsets of a complete collection of sites
@@ -302,8 +305,6 @@ class FilteredSiteCollection(object):
     get a different FilteredSiteCollection referring to the complete
     SiteCollection `fsc.complete`, not to the filtered collection `fsc`.
     """
-    _slots_ = 'indices complete'.split()
-
     def __init__(self, indices, complete):
         if complete is not complete.complete:
             raise ValueError(

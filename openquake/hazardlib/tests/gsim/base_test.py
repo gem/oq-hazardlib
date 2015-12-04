@@ -59,7 +59,7 @@ class _FakeGSIMTestCase(unittest.TestCase):
 
     def _get_poes(self, **kwargs):
         default_kwargs = dict(
-            sctx=SitesContext(),
+            sctx=None,
             rctx=RuptureContext(),
             dctx=DistancesContext(),
             imt=self.DEFAULT_IMT(),
@@ -72,7 +72,7 @@ class _FakeGSIMTestCase(unittest.TestCase):
 
     def _disaggregate_poe(self, **kwargs):
         default_kwargs = dict(
-            sctx=SitesContext(),
+            sctx=None,
             rctx=RuptureContext(),
             dctx=DistancesContext(),
             imt=self.DEFAULT_IMT(),
@@ -459,7 +459,6 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         )
         sites = SiteCollection([self.site1, self.site2])
         sctx, rctx, dctx = self.make_contexts(sites, self.rupture)
-        self.assertIsInstance(sctx, SitesContext)
         self.assertIsInstance(rctx, RuptureContext)
         self.assertIsInstance(dctx, DistancesContext)
         self.assertEqual(rctx.mag, 123.45)
@@ -510,7 +509,6 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.assertFalse(hasattr(rctx, 'dip'))
         self.assertFalse(hasattr(rctx, 'hypo_lat'))
         self.assertFalse(hasattr(rctx, 'hypo_depth'))
-        self.assertFalse(hasattr(sctx, 'vs30measured'))
         self.assertFalse(hasattr(sctx, 'z2pt0'))
         self.assertFalse(hasattr(dctx, 'rrup'))
         self.assertFalse(hasattr(dctx, 'ztor'))

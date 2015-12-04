@@ -31,9 +31,9 @@ from scipy.interpolate import interp1d
 import numpy
 
 from openquake.hazardlib import const
+from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib import imt as imt_module
-from openquake.hazardlib.gsim.base import (GMPE, RuptureContext, SitesContext,
-                                           DistancesContext)
+from openquake.hazardlib.gsim.base import GMPE, RuptureContext
 from openquake.baselib.python3compat import round
 
 
@@ -102,7 +102,7 @@ class AmplificationTable(object):
         self.values = self.values[self.argidx]
         if self.parameter in RuptureContext._slots_:
             self.element = "Rupture"
-        elif self.parameter in SitesContext._slots_:
+        elif self.parameter in SiteCollection._slots_:
             self.element = "Sites"
         else:
             raise ValueError("Amplification parameter %s not recognised!"
