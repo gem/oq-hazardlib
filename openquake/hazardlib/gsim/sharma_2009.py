@@ -27,26 +27,27 @@ from scipy.constants import g
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const, imt
 
+
 class SharmaEtAl2009(GMPE):
     """
-    Implements GMPE of Sharma et al. (2009). This GMPE is intended 
-    for the Indian Himalayas but is based on data from both Zagros 
-    in Iran and the Himalayas. The combination of these two regions 
-    is motivated by the sparsity of near field data. Seismotectonic 
-    similarity is supposed based on both regions being continental 
+    Implements GMPE of Sharma et al. (2009). This GMPE is intended
+    for the Indian Himalayas but is based on data from both Zagros
+    in Iran and the Himalayas. The combination of these two regions
+    is motivated by the sparsity of near field data. Seismotectonic
+    similarity is supposed based on both regions being continental
     collision zones, and in spite of the lack of subduction in Zagros.
-    
+
     Reference:
-    
-    Sharma, M. L., Douglas, J., Bungum, H., and Kotadia, J. (2009). 
-    Ground-motion prediction equations based on data from the Himalayan 
-    and Zagros regions. *Journal of Earthquake Engineering*, 
+
+    Sharma, M. L., Douglas, J., Bungum, H., and Kotadia, J. (2009).
+    Ground-motion prediction equations based on data from the Himalayan
+    and Zagros regions. *Journal of Earthquake Engineering*,
     13(8):1191–1210.
     """
-    
-    #: Supported tectonic region type is 'active shallow crust' 
-    #: however as inndicated the introduction  the tectonics of the 
-    #: Himalayas have a "great range of focal depths" (Sharma et 
+
+    #: Supported tectonic region type is 'active shallow crust'
+    #: however as inndicated the introduction  the tectonics of the
+    #: Himalayas have a "great range of focal depths" (Sharma et
     #: al., 2009, p. 1192).
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
@@ -57,32 +58,32 @@ class SharmaEtAl2009(GMPE):
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
-    #: :attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`, 
+    #: :attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
     #: see p. 1200.
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Only total standard deviation is supported, see Table 2, p. 1202.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
 
-    #: Required site parameter Vs30 is used to set binary rock/soil 
-    #: classification dummy variable, see equation (1) on p. 1200. 
+    #: Required site parameter Vs30 is used to set binary rock/soil
+    #: classification dummy variable, see equation (1) on p. 1200.
     REQUIRES_SITES_PARAMETERS = set(('vs30',))
 
-    #: Required rupture parameters are magnitude and rake, see 
-    #: equation (1) on p. 1200. Rake is used to distinguish between 
-    #: reverse and strike-slip faulting, and to detect mis-application 
-    #: of GMPE to normal faulting. 
+    #: Required rupture parameters are magnitude and rake, see
+    #: equation (1) on p. 1200. Rake is used to distinguish between
+    #: reverse and strike-slip faulting, and to detect mis-application
+    #: of GMPE to normal faulting.
     REQUIRES_RUPTURE_PARAMETERS = set(('rake', 'mag'))
 
     #: Required distance measure is Joyner-Boore distance, see p. 1200
     REQUIRES_DISTANCES = set(('rjb',))
 
     #: GMPE not tested against independent implementation so raise
-    #: not verified warning. There is (visually) perfect agreement at 
-    #: 0.04 s for all magitudes, distances, mechanisms, and site 
-    #: conditions, but for other periods the results diverge. This 
+    #: not verified warning. There is (visually) perfect agreement at
+    #: 0.04 s for all magitudes, distances, mechanisms, and site
+    #: conditions, but for other periods the results diverge. This
     #: may be due to insufficient accuracy in coefficients, or it may
-    #: be due to undocumented aspects of the original author's own 
+    #: be due to undocumented aspects of the original author's own
     #: implementation.
     non_verified = True
 
@@ -92,7 +93,7 @@ class SharmaEtAl2009(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for specification of input and result values.
         """
-                
+
         # extract dictionary of coefficients specific to required
         # intensity measure type
         C = self.COEFFS[im_type]
@@ -106,12 +107,12 @@ class SharmaEtAl2009(GMPE):
         # Convert to g
         mean = np.log((10.0 ** log_mean) / g)
 
-        stddevs = self._get_stddevs(C, stddev_types, 
-                                        len(sites.vs30))
+        stddevs = self._get_stddevs(C, stddev_types,
+                                    len(sites.vs30))
 
-        # Since sigma is not present in equation (1) it is not 
-        # entirely clear what it represents. For now just pass the 
-        # raw value on through.       
+        # Since sigma is not present in equation (1) it is not
+        # entirely clear what it represents. For now just pass the
+        # raw value on through.
 
         return mean, stddevs
 
@@ -149,7 +150,7 @@ class SharmaEtAl2009(GMPE):
         """
         S = self._get_site_type_dummy_variables(sites)
         return C['b5']*S
-        
+
     def _get_mechanism(self, rup, C):
         """
         Compute fifth term of equation (1) on p. 1200:
@@ -158,55 +159,55 @@ class SharmaEtAl2009(GMPE):
         """
         H = self._get_fault_type_dummy_variables(rup)
         return C['b6']*H
-        
+
     def _get_site_type_dummy_variables(self, sites):
         """
-        Binary rock/soil classification dummy variable, ``S`` based 
-        on sites.vs30. Theshhold is not explicitly given in Sharma 
-        et al. (2009) so a value of 760 m/s was chosen. This is 
-        consistent with 
-        :mod:`openquake.hazardlib.gsim.atkinson_boore_2003`, 
-        corresponds to NEHRP class A/B, and is close to the 
+        Binary rock/soil classification dummy variable, ``S`` based
+        on sites.vs30. Theshhold is not explicitly given in Sharma
+        et al. (2009) so a value of 760 m/s was chosen. This is
+        consistent with
+        :mod:`openquake.hazardlib.gsim.atkinson_boore_2003`,
+        corresponds to NEHRP class A/B, and is close to the
         threshhold for Eurocode 8 Class 8 (800 m/s).
         """
         Sab = np.array(sites.vs30 > 760.)
         return Sab
 
     def _get_fault_type_dummy_variables(self, rup):
-        """ Get fault-type classification dummy variable, ``H``, 
-        based on rup.rake. 
-        
-        Rake threshhold of 30 degrees is used, same as 
-        :mod:`openquake.hazardlib.gsim.boore_atkinson_2008` and 
-        :mod:`openquake.hazardlib.gsim.campbell_bozorgnia_2008`. 
-        Contrast with 45 degree threshhold used by 30 degree 
-        threshhold used in :mod:`openquake.hazardlib.gsim.zhao_2006`. 
+        """ Get fault-type classification dummy variable, ``H``,
+        based on rup.rake.
+
+        Rake threshhold of 30 degrees is used, same as
+        :mod:`openquake.hazardlib.gsim.boore_atkinson_2008` and
+        :mod:`openquake.hazardlib.gsim.campbell_bozorgnia_2008`.
+        Contrast with 45 degree threshhold used by 30 degree
+        threshhold used in :mod:`openquake.hazardlib.gsim.zhao_2006`.
 
        :raises ValueError:
             If mechanism is determined to be normal faulting, since
-            as summarized in Table 2 on p. 1197 the data used for 
+            as summarized in Table 2 on p. 1197 the data used for
             regression included only reverse and stike-slip events.
         """
-       
+
         rake_thresh = 30.
-        
+
         # normal faulting
         Fn = np.array(rake_thresh < -rup.rake < (180. - rake_thresh))
-        
+
         # reverse raulting
-        Fr = np.array(rake_thresh <  rup.rake < (180. - rake_thresh))
-        
+        Fr = np.array(rake_thresh < rup.rake < (180. - rake_thresh))
+
         if Fn.any():
-            msg = ('Normal faulting is not supported by %s' 
-                % type(self).__name__)
+            msg = ('Normal faulting is not supported by %s'
+                   % type(self).__name__)
             warnings.warn(msg, UserWarning)
             return np.nan
         else:
             return Fr
 
-    #: Coefficients taken from Table 2, p. 1202. Note that "In 
-    #: this article, only the coefficients for a subset of these 
-    #: periods [between 0.04 and 2.5 s] are reported" and the damping 
+    #: Coefficients taken from Table 2, p. 1202. Note that "In
+    #: this article, only the coefficients for a subset of these
+    #: periods [between 0.04 and 2.5 s] are reported" and the damping
     #: is 5% (Sharma et al., 2009, p. 1200).
     COEFFS = CoeffsTable(sa_damping=5., table="""\
      IMT      b1    std1      b2    std2      b3    std3      b5    std4      b6    std6    sigma
