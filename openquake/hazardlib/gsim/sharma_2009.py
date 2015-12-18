@@ -96,18 +96,18 @@ class SharmaEtAl2009(GMPE):
 
         # extract dictionary of coefficients specific to required
         # intensity measure type
-        C = self.COEFFS[im_type]
-        C.update(self.CONSTS)
+        coeffs = self.COEFFS[im_type]
+        coeffs.update(self.CONSTS)
 
-        log_mean = (self._compute_magnitude(rup, C) +
-                    self._compute_distance(dists, C) +
-                    self._get_site_amplification(sites, C) +
-                    self._get_mechanism(rup, C))
+        log_mean = (self._compute_magnitude(rup, coeffs) +
+                    self._compute_distance(dists, coeffs) +
+                    self._get_site_amplification(sites, coeffs) +
+                    self._get_mechanism(rup, coeffs))
 
         # Convert to g
         mean = np.log((10.0 ** log_mean) / g)
 
-        stddevs = self._get_stddevs(C, stddev_types,
+        stddevs = self._get_stddevs(coeffs, stddev_types,
                                     len(sites.vs30))
 
         # Since sigma is not present in equation (1) it is not
@@ -116,51 +116,51 @@ class SharmaEtAl2009(GMPE):
 
         return mean, stddevs
 
-    def _get_stddevs(self, C, stddev_types, num_sites):
+    def _get_stddevs(self, coeffs, stddev_types, num_sites):
         """
         Return total sigma as reported in Table 2, p. 1202.
         """
         stddevs = []
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            stddevs.append(C['sigma'] + np.zeros(num_sites))
+            stddevs.append(coeffs['sigma'] + np.zeros(num_sites))
         return np.array(stddevs)
 
-    def _compute_magnitude(self, rup, C):
+    def _compute_magnitude(self, rup, coeffs):
         """
         Compute first two terms of equation (1) on p. 1200:
 
         ``b1 + b2 * M``
         """
-        return C['b1'] + C['b2']*rup.mag
+        return coeffs['b1'] + coeffs['b2']*rup.mag
 
-    def _compute_distance(self, dists, C):
+    def _compute_distance(self, dists, coeffs):
         """
         Compute third term of equation (1) on p. 1200:
 
         ``b3 * log(sqrt(Rjb ** 2 + b4 ** 2))``
         """
-        return C['b3']*np.log10(np.sqrt(dists.rjb**2. + C['b4']**2.))
+        return coeffs['b3']*np.log10(np.sqrt(dists.rjb**2. + coeffs['b4']**2.))
 
-    def _get_site_amplification(self, sites, C):
+    def _get_site_amplification(self, sites, coeffs):
         """
         Compute fourth term of equation (1) on p. 1200:
 
         ``b5 * S``
         """
-        S = self._get_site_type_dummy_variables(sites)
-        return C['b5']*S
+        is_rock = self.get_site_type_dummy_variables(sites)
+        return coeffs['b5']*is_rock
 
-    def _get_mechanism(self, rup, C):
+    def _get_mechanism(self, rup, coeffs):
         """
         Compute fifth term of equation (1) on p. 1200:
 
         ``b6 * H``
         """
-        H = self._get_fault_type_dummy_variables(rup)
-        return C['b6']*H
+        is_reverse = self.get_fault_type_dummy_variables(rup)
+        return coeffs['b6']*is_reverse
 
-    def _get_site_type_dummy_variables(self, sites):
+    def get_site_type_dummy_variables(self, sites):
         """
         Binary rock/soil classification dummy variable, ``S`` based
         on sites.vs30. Theshhold is not explicitly given in Sharma
@@ -170,10 +170,11 @@ class SharmaEtAl2009(GMPE):
         corresponds to NEHRP class A/B, and is close to the
         threshhold for Eurocode 8 Class 8 (800 m/s).
         """
-        Sab = np.array(sites.vs30 > 760.)
-        return Sab
 
-    def _get_fault_type_dummy_variables(self, rup):
+        is_rock = np.array(sites.vs30 > 760.)
+        return is_rock
+
+    def get_fault_type_dummy_variables(self, rup):
         """ Get fault-type classification dummy variable, ``H``,
         based on rup.rake.
 
@@ -183,7 +184,7 @@ class SharmaEtAl2009(GMPE):
         Contrast with 45 degree threshhold used by 30 degree
         threshhold used in :mod:`openquake.hazardlib.gsim.zhao_2006`.
 
-       :raises ValueError:
+        :raises ValueError:
             If mechanism is determined to be normal faulting, since
             as summarized in Table 2 on p. 1197 the data used for
             regression included only reverse and stike-slip events.
@@ -192,18 +193,18 @@ class SharmaEtAl2009(GMPE):
         rake_thresh = 30.
 
         # normal faulting
-        Fn = np.array(rake_thresh < -rup.rake < (180. - rake_thresh))
+        is_normal = np.array(rake_thresh < -rup.rake < (180. - rake_thresh))
 
         # reverse raulting
-        Fr = np.array(rake_thresh < rup.rake < (180. - rake_thresh))
+        is_reverse = np.array(rake_thresh < rup.rake < (180. - rake_thresh))
 
-        if Fn.any():
+        if is_normal.any():
             msg = ('Normal faulting is not supported by %s'
                    % type(self).__name__)
             warnings.warn(msg, UserWarning)
             return np.nan
         else:
-            return Fr
+            return is_reverse
 
     #: Coefficients taken from Table 2, p. 1202. Note that "In
     #: this article, only the coefficients for a subset of these
