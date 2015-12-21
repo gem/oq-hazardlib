@@ -40,11 +40,11 @@ class SharmaEtAl2009TestCase(BaseGSIMTestCase):
     """
 
     GSIM_CLASS = SharmaEtAl2009
-    MEAN_FILE = 'SDBK09/SDBK09_MEAN_SHARMA.csv'
+    MEAN_FILE = 'SDBK09/SDBK09_MEAN.csv'
     SIGMA_FILE = 'SDBK09/SDBK09_STD_TOTAL.csv'
 
     def test_mean(self):
         self.check(self.MEAN_FILE, max_discrep_percentage=1e-4)
 
-     def test_std_total(self):
+    def test_std_total(self):
         self.check(self.SIGMA_FILE, max_discrep_percentage=1e-4)
