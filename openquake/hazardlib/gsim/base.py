@@ -597,6 +597,20 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
             for i, idx in enumerate(iml_bin_indices)
         ])
 
+    def get_imts(self):
+        """
+        :returns: set of IMT strings, obtained from the underlying coefficients
+        """
+        imts = set()
+        for attr in dir(self):
+            val = getattr(self, attr)
+            if isinstance(val, CoeffsTable):
+                for sa in val.sa_coeffs:
+                    imts.add(str(sa))
+                for imt in val.non_sa_coeffs:
+                    imts.add(str(imt))
+        return imts
+
     @abc.abstractmethod
     def to_distribution_values(self, values):
         """
