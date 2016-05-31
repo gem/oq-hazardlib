@@ -415,6 +415,12 @@ class GMPETable(GMPE):
                 imt_list.append(imt_val.__class__)
         return imt_list
 
+    def get_imts(self):
+        """
+        :returns: empty set; spectral accelations are interpolated
+        """
+        return set()
+
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
         """
         Returns the mean and standard deviations

@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added a method `get_imts` to the base GSIM class so that it easy
+    to determine which are the exact IMTs the GSIM has been defined for
   * Removed the .id attribute from the Site class
 
   [Graeme Weatherill]
