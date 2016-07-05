@@ -1,6 +1,6 @@
 .. module:: hazardlib
 
-.. include:: ../README.rst
+.. include:: intro.rst
 
 ==================
 Internal structure
@@ -16,4 +16,5 @@ Internal structure
    tom
    calc
    site
+   probability_map           
    other

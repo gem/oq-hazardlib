@@ -35,6 +35,9 @@ import collections
 
 import numpy
 from decorator import decorator
+from openquake.baselib.python3compat import dtype
+
+F64 = numpy.float64
 
 
 class WeightedSequence(collections.MutableSequence):
@@ -566,6 +569,56 @@ class AccumDict(dict):
                                for key, value in self.items()})
 
 
+# return a dict imt -> slice and the total number of levels
+def _slicedict_n(imt_dt):
+    n = 0
+    slicedic = {}
+    for imt in imt_dt.names:
+        shp = imt_dt[imt].shape
+        n1 = n + shp[0] if shp else 1
+        slicedic[imt] = slice(n, n1)
+        n = n1
+    return slicedic, n
+
+
+class DictArray(collections.Mapping):
+    """
+    A small wrapper over a dictionary of arrays:
+
+    >>> DictArray({'PGA': [0.01, 0.02, 0.04], 'PGV': [0.1, 0.2]})
+    <DictArray
+    PGA: [ 0.01  0.02  0.04]
+    PGV: [ 0.1  0.2]>
+
+    The DictArray maintains the lexicographic order of the keys.
+    """
+    def __init__(self, imtls):
+        self.imt_dt = dt = dtype(
+            [(imt, F64, len(imls) if hasattr(imls, '__len__') else 1)
+             for imt, imls in sorted(imtls.items())])
+        self.slicedic, num_levels = _slicedict_n(dt)
+        self.array = numpy.zeros(num_levels, F64)
+        for imt, imls in imtls.items():
+            self[imt] = imls
+
+    def __getitem__(self, imt):
+        return self.array[self.slicedic[imt]]
+
+    def __setitem__(self, imt, array):
+        self.array[self.slicedic[imt]] = array
+
+    def __iter__(self):
+        for imt in self.imt_dt.names:
+            yield imt
+
+    def __len__(self):
+        return len(self.imt_dt.names)
+
+    def __repr__(self):
+        data = ['%s: %s' % (imt, self[imt]) for imt in self]
+        return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(data))
+
+
 def groupby(objects, key, reducegroup=list):
     """
     :param objects: a sequence of objects with a key value
@@ -607,6 +660,27 @@ def groupby2(records, kfield, vfield):
         vgetter = operator.itemgetter(vfield)
     dic = groupby(records, kgetter, lambda rows: [vgetter(r) for r in rows])
     return list(dic.items())  # Python3 compatible
+
+
+def _reducerecords(group):
+    records = list(group)
+    return numpy.array(records, records[0].dtype)
+
+
+def group_array(array, *kfields):
+    """
+    Convert an array into an OrderedDict kfields -> array
+    """
+    return groupby(array, operator.itemgetter(*kfields), _reducerecords)
+
+
+def get_array(array, **kw):
+    """
+    Extract a subarray by filtering on the given keyword arguments
+    """
+    for name, value in kw.items():
+        array = array[array[name] == value]
+    return array
 
 
 def humansize(nbytes, suffixes=('B', 'KB', 'MB', 'GB', 'TB', 'PB')):

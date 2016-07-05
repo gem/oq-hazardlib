@@ -18,12 +18,17 @@
 
 import ast
 import pydoc
+try:  # with Python 3
+    from urllib.parse import quote_plus, unquote_plus
+except ImportError:  # with Python 2
+    from urllib import quote_plus, unquote_plus
 import collections
 import numpy
 import h5py
-from openquake.baselib.python3compat import pickle
+from openquake.baselib.python3compat import pickle, decode
 
 vbytes = h5py.special_dtype(vlen=bytes)
+vstr = h5py.special_dtype(vlen=str)
 
 
 class Hdf5Dataset(object):
@@ -129,10 +134,9 @@ class LiteralAttrs(object):
 
     def __fromh5__(self, array, attrs):
         dd = collections.defaultdict(dict)
-        for (name, literal) in array:
-            if isinstance(literal, numpy.object_):
-                # needed for Python3 compatibility
-                literal = repr(literal)
+        for (name_, literal_) in array:
+            name = decode(name_)
+            literal = decode(literal_)
             if '.' in name:
                 k1, k2 = name.split('.', 1)
                 dd[k1][k2] = ast.literal_eval(literal)
@@ -214,7 +218,7 @@ class File(h5py.File):
             pyclass = ''
         if isinstance(obj, dict):
             for k, v in sorted(obj.items()):
-                key = '%s/%s' % (path, k)
+                key = '%s/%s' % (path, quote_plus(k))
                 self[key] = v
         else:
             super(File, self).__setitem__(path, obj)
@@ -231,9 +235,23 @@ class File(h5py.File):
             cls = pydoc.locate(h5attrs['__pyclass__'])
             obj = cls.__new__(cls)
             if not hasattr(h5obj, 'shape'):  # is group
-                h5obj = {k: self['%s/%s' % (path, k)]
+                h5obj = {unquote_plus(k): self['%s/%s' % (path, k)]
                          for k, v in h5obj.items()}
             obj.__fromh5__(h5obj, h5attrs)
             return obj
         else:
             return h5obj
+
+
+def array_of_vstr(lst):
+    """
+    :param lst: a list of strings or bytes
+    :returns: an array of variable length ASCII strings
+    """
+    ls = []
+    for el in lst:
+        try:
+            ls.append(el.encode('utf-8'))
+        except AttributeError:
+            ls.append(el)
+    return numpy.array(ls, vstr)

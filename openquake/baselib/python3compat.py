@@ -25,13 +25,71 @@ from __future__ import print_function
 import os
 import sys
 import math
+import numpy
 import importlib
 import subprocess
 
 PY3 = sys.version_info[0] == 3
 PY2 = sys.version_info[0] == 2
 
-if PY3:
+
+def encode(val):
+    """
+    Encode a string assuming the encoding is UTF-8.
+
+    :param: a unicode or bytes object
+    :returns: bytes
+    """
+    try:
+        # assume it is an unicode string
+        return val.encode('utf-8')
+    except AttributeError:
+        # it was an already encoded object
+        return val
+
+
+def decode(val):
+    """
+    Decode an object assuming the encoding is UTF-8.
+
+    :param: a unicode or bytes object
+    :returns: a unicode object
+    """
+    try:
+        # assume it is an encoded bytes object
+        return val.decode('utf-8')
+    except AttributeError:
+        # it was an already decoded unicode object
+        return val
+
+if PY2:
+    import cPickle as pickle
+    import ConfigParser as configparser
+    from itertools import izip as zip
+
+    range = xrange
+    round = round
+    unicode = unicode
+
+    # taken from six
+    def exec_(_code_, _globs_=None, _locs_=None):
+        """Execute code in a namespace."""
+        if _globs_ is None:
+            frame = sys._getframe(1)
+            _globs_ = frame.f_globals
+            if _locs_ is None:
+                _locs_ = frame.f_locals
+            del frame
+        elif _locs_ is None:
+            _locs_ = _globs_
+        exec("""exec _code_ in _globs_, _locs_""")
+
+    exec('''
+def raise_(tp, value=None, tb=None):
+    raise tp, value, tb
+''')
+
+else:  # Python 3
     import pickle
     import configparser
     exec_ = eval('exec')
@@ -59,33 +117,6 @@ if PY3:
         if exc.__traceback__ is not tb:
             raise exc.with_traceback(tb)
         raise exc
-
-else:  # Python 2
-    import cPickle as pickle
-    import ConfigParser as configparser
-    from itertools import izip as zip
-
-    range = xrange
-    round = round
-    unicode = unicode
-
-    # taken from six
-    def exec_(_code_, _globs_=None, _locs_=None):
-        """Execute code in a namespace."""
-        if _globs_ is None:
-            frame = sys._getframe(1)
-            _globs_ = frame.f_globals
-            if _locs_ is None:
-                _locs_ = frame.f_locals
-            del frame
-        elif _locs_ is None:
-            _locs_ = _globs_
-        exec("""exec _code_ in _globs_, _locs_""")
-
-    exec('''
-def raise_(tp, value=None, tb=None):
-    raise tp, value, tb
-''')
 
 
 # copied from http://lucumr.pocoo.org/2013/5/21/porting-to-python-3-redux/
@@ -123,6 +154,25 @@ def check_syntax(pkg):
                 else:
                     ok += 1
     print('Checked %d ok, %d wrong modules' % (ok, err))
+
+
+def dtype(arglist):
+    """
+    Version of numpy.dtype working both in Python 2 and 3.
+
+    :param arglist:
+         list of pairs (name, dtype) where name must be bytes in Python 2 and
+         str in Python 3
+    :returns: a numpy dtype
+    """
+    lst = []
+    for arg in arglist:
+        if PY2:
+            newarg = (encode(arg[0]),) + arg[1:]
+        else:  # Python 3
+            newarg = (decode(arg[0]),) + arg[1:]
+        lst.append(newarg)
+    return numpy.dtype(lst)
 
 
 if __name__ == '__main__':

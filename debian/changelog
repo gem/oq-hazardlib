@@ -1,3 +1,21 @@
+python-oq-hazardlib (0.20.0-0~precise01) precise; urgency=low
+
+  [Michele Simionato]
+  * Fixed the serialization on HDF5 of dictionaries with keys containing slashes
+  * Renamed Imtls -> DictArray
+  * Removed the .id attribute from the Site class
+
+  [Graeme Weatherill]
+  * Updates coefficients to Montalva et al. GMPE and updates year to 2016
+
+  [Michele Simionato]
+  * Added a Tile class to filter efficiently point sources
+  * Removed the function `hazard_curve.hazard_curves` that has been
+    deprecated from November 2014
+  * Fixed the string representation of GSIM instances: this solves a serious
+    bug in the GMPETable
+  * Removed the rupture_site_filter where it was not used
+
   [Daniele Viganò]
   * Added support for Ubuntu 16.04 (xenial) packages
 
@@ -12,6 +30,8 @@
 
   [Graeme Weatherill]
   * Fixes Z1.0 units bug in Abrahamson, Silva and Kamai (2014)
+  * Added modifications to Zhao (2006) inslab GMPE and implements
+    Atkinson (2008') - needed for 2014 US NSHMP
 
   [Michele Simionato]
   * Improved the validity check on the Intensity Measure Type
@@ -20,6 +40,8 @@
     satisfying the HDF5 protocol used by the OpenQuake software
   * Added a LiteralAttrs class to serialize literal attributes on HDF5
   * Added to the Monitor the ability to send commands
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 21 Jun 2016 13:10:35 +0200
 
 python-oq-hazardlib (0.19.0-0~precise01) precise; urgency=low
 
