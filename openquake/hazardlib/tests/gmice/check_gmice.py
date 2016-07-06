@@ -111,11 +111,6 @@ def check_gmice(gmice_cls, datafile, max_discrep_percentage, debug=False):
                     result = mean
                 else:
                     [result] = stddevs
-                comparisons = numpy.column_stack([input_levels[imt],
-                                                  expected_result,
-                                                  result,
-                                                  100.0 * (result / expected_result - 1.0)
-                                                  ])
             elif test_type == "GROUND MOTION":
                 mean, stddevs = gsim.get_mean_gm_and_stddevs(
                     input_levels[MMI()], sctx, rctx, dctx, imt, stddev_types)
@@ -123,14 +118,6 @@ def check_gmice(gmice_cls, datafile, max_discrep_percentage, debug=False):
                     result = numpy.exp(mean)
                 else:
                     [result] = stddevs
-                comparisons = numpy.column_stack([input_levels[MMI()],
-                                                  expected_result,
-                                                  result,
-                                                  100.0 * (result / expected_result - 1.0)])
-            print("|".join(["{:s}={:s}".format(key, str(getattr(rctx, key)))
-                           for key in rctx.__dict__]), imt)
-            for row in comparisons:
-                print(row)
 
             ctxs.append(
                 (orig_sctx == sctx) and (orig_rctx == rctx) and

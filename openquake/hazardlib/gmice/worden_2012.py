@@ -69,6 +69,15 @@ class WordenEtAl2012(GMICE):
 
     #: No distance parameters required
     REQUIRES_DISTANCES = set(())
+
+    #: Intensity range MMI 1 to 10
+    INTENSITY_RANGE = (1.0, 10.0)
+
+    #: Source Name
+    SOURCE_NAME = "Worden et al. (2012)"
+
+    #: Scale
+    SCALE = 'scale_wgrw12.ps'
     
     def get_mean_intensity_and_stddevs(self, imls, sites, rup, dists, imt,
                                       stddev_types):

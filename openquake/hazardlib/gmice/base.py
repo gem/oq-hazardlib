@@ -20,9 +20,9 @@
 Prototype base GMICE
 """
 import abc
+import numpy as np
 from openquake.hazardlib.imt import MMI
-from openquake.hazardlib.gsim.base import GMPE
-
+from openquake.hazardlib.gsim.base import GMPE, IPE
 
 class GMICE(GMPE):
     """
@@ -38,6 +38,14 @@ class GMICE(GMPE):
 
     The base class contains several key methods to apply the conversions.
     """
+    # Defines the range of intensity values for which the GMICE applies
+    INTENSITY_RANGE = (0.0, 12.0) # Defaulting to full range
+
+    # Shakemap requires a "pretty" source name (e.g. Worden et al., (2012))
+    SOURCE_NAME = ""
+
+    # Shakemap requires a scale
+    SCALE = ""
     
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -77,19 +85,20 @@ class GMICE(GMPE):
         """
         imls, _ = gmpe.get_mean_and_stddevs(sites, rup, dists, imt,
                                             stddev_types)
-        return self.get_mean_and_stddevs(imls, sites, rup, dists, imt,
-                                         stddev_types)
+        print np.exp(imls)
+        return self.get_mean_intensity_and_stddevs(np.exp(imls), sites,
+                                                   rup, dists,
+                                                   imt, stddev_types)
 
 
     def get_mean_gm_and_stddevs_from_ipe(self, ipe, sites, rup, dists, imt,
-                                         stddev_types):
+                                         stddev_types, mmi_imt=MMI()):
         """
         Same as the ordinary method but fed with the GMPE instead 
         """
         # Verify that in this case the IMT is macroseismic intensity
-        assert str(imt) in ('MMI', "EMS")
-        assert imt in ipe.DEFINED_FOR_INTENSITY_MEASURE_TYPES
-        imls, _ = ipe.get_mean_and_stddevs(sites, rup, dists, imt,
+        assert isinstance(ipe, IPE)
+        imls, _ = ipe.get_mean_and_stddevs(sites, rup, dists, mmi_imt,
                                            stddev_types)
-        return self.get_mean_and_stddevs(imls, sites, rup, dists, imt,
-                                         stddev_types)
+        return self.get_mean_gm_and_stddevs(imls, sites, rup, dists, imt,
+                                            stddev_types)
