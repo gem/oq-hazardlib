@@ -23,7 +23,6 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import MMI, PGA, PGV, SA
 from openquake.hazardlib.gmice.base import GMICE
 from openquake.hazardlib.gsim.base import CoeffsTable
-#g = 9.81
 
 class WordenEtAl2012(GMICE):
     """
@@ -97,7 +96,8 @@ class WordenEtAl2012(GMICE):
 
     def get_mean_mmi(self, C, C2, log_imls):
         """
-        Return the expected macroseismic intensity from the ground motion input
+        Return the expected macroseismic intensity from the ground motion
+        input, as defined in equation 3 of Worden et al. (2012)
         """
         mmi = C["c1"] + C["c2"] * log_imls
         idx = log_imls < C2["t1"]
@@ -140,7 +140,8 @@ class WordenEtAl2012(GMICE):
     
     def get_mean_gm(self, C, C2, mmi):
         """
-        Returns the expected ground motion from the macroseismic intensity input
+        Returns the expected ground motion from the macroseismic intensity
+        input, as defined in equation 4 of Worden et al. (2012)
         """
         logy = (mmi - C["c1"]) / C["c2"]
         idx = mmi < C2["t2"]
@@ -153,6 +154,8 @@ class WordenEtAl2012(GMICE):
 
     def get_stddev_gm(self, C, stddev_types, imls_shape):
         """
+        Returns the standard devation of ground motion (in log units)
+        as given in Table 2 of Worden et al. (2012)
         """
         stddevs = []
         for stddev_type in stddev_types:
@@ -163,6 +166,8 @@ class WordenEtAl2012(GMICE):
 
     # This will interpolate coefficients - which may not be the author's
     # original intention.
+    # The coefficients for standard deviation are taken from Table 2,
+    # whilst the coefficients for the remaining terms are from Table 1
     # In the original shakemap implementation the standard deviations for the
     # version considering magnitude and distance are applied to both GMICEs
     COEFFS = CoeffsTable(sa_damping=5, table="""
@@ -186,17 +191,23 @@ class WordenEtAl2012(GMICE):
 
 class WordenEtAl2012MagDist(WordenEtAl2012):
     """
+    Adaptation of the model of Worden et al. (2012) to account for the
+    magnitude and distance dependence of the residuals.
     """
     #: rupture magnitude required
     REQUIRES_RUPTURE_PARAMETERS = set(("mag",))
 
     #: rupture distance required
     REQUIRES_DISTANCES = set(("rrup",))
+
+    #: Source Name
+    SOURCE_NAME = "Worden et al. (2012) [Magnitude & Distance Dependent]"
+
     
     def get_mean_intensity_and_stddevs(self, imls, sites, rup, dists, imt,
                                        stddev_types):
         """
-        Implements equation 3 of Worden et al.
+        Converts a set of ground motion levels to macroseismic intensity
         """
         C = self.COEFFS[imt]
         C2 = self.COEFFS2[imt]
@@ -215,6 +226,8 @@ class WordenEtAl2012MagDist(WordenEtAl2012):
 
     def get_mean_mmi(self, C, C2, log_imls, mag, rrup):
         """
+        Returns the mean macroseismic intensity from ground motion, as defined
+        in equation 6 of Worden et al. (2012)
         """
         mmi = C["c5"] + C["c6"] * np.log10(rrup) + C["c7"] * mag
         idx = log_imls <= C2["t1"]
@@ -252,7 +265,8 @@ class WordenEtAl2012MagDist(WordenEtAl2012):
     
     def get_mean_gm(self, C, C2, mmi, mag, rrup):
         """
-        Returns the expected ground motion from the macroseismic intensity
+        Returns the expected ground motion from the macroseismic intensity,
+        as defined in equation 7 or Worden et al. (2012)
         """
         logy = mmi - (C["c5"] + C["c6"] * np.log10(rrup) + C["c7"] * mag)
         

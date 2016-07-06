@@ -13,6 +13,7 @@ Internal structure
    scalerel
    mfd
    gsim/index
+   gmice
    tom
    calc
    site
