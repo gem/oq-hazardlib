@@ -130,6 +130,14 @@ def get_distances(rupture, mesh, param='rjb'):
         dist = rupture.hypocenter.distance_to_mesh(mesh, with_depths=False)
     elif param == 'rcdpp':
         dist = rupture.get_cdppvalue(mesh)
+    elif param == 'rs':
+        dist = rupture.get_rupture_fraction_strikeslip(mesh, angle=False)
+    elif param == 'rtheta':
+        dist = rupture.get_rupture_fraction_strikeslip(mesh, angle=True)
+    elif param == 'rd':
+        dist = rupture.get_rupture_fraction_dipslip(mesh, angle=False)
+    elif param == 'rphi':
+        dist = rupture.get_rupture_fraction_dipslip(mesh, angle=True)
     else:
         raise ValueError('Unknown distance measure %r' % param)
     return dist
@@ -385,6 +393,18 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
     #:     Direct point parameter for directivity effect centered on the site- and earthquake-specific
     #      average DPP used. See:
     #:     See :meth:`~openquake.hazardlib.source.rupture.ParametricProbabilisticRupture.get_dppvalue`.
+    #: ``rs``
+    #:     Rupture fraction distance for directivity effect on the site. See:
+    #:     See :meth:`~openquake.hazardlib.source.rupture.ParametricProbabilisticRupture.get_rupture_fraction_strikeslip`.
+    #: ``rtheta``
+    #:     The angel between the rupture slip direction and the path to the site with respect to the rupture
+    #:     See :meth:`~openquake.hazardlib.source.rupture.ParametricProbabilisticRupture.get_rupture_fraction_strikeslip`.
+    #: ``rd``
+    #:     Rupture fraction distance for directivity effect on the site. See:
+    #:     See :meth:`~openquake.hazardlib.source.rupture.ParametricProbabilisticRupture.get_rupture_fraction_dipslip`.
+    #: ``rphi``
+    #:     The angel between the rupture slip direction and the path to the site with respect to the rupture
+    #:     See :meth:`~openquake.hazardlib.source.rupture.ParametricProbabilisticRupture.get_rupture_fraction_dipslip`.
     #:
     #: All the distances are available from the :class:`DistancesContext`
     #: object attributes with same names. Values are in kilometers.
@@ -824,7 +844,7 @@ class DistancesContext(BaseContext):
     in a result context object.
     """
     _slots_ = ('rrup', 'rx', 'rjb', 'rhypo', 'repi', 'ry0', 'rcdpp',
-               'azimuth', 'hanging_wall')
+               'azimuth', 'hanging_wall', 'rs', 'rtheta', 'rd', 'rphi')
 
 
 class RuptureContext(BaseContext):
@@ -839,10 +859,8 @@ class RuptureContext(BaseContext):
     Only those required parameters are made available in a result context
     object.
     """
-    _slots_ = (
-        'mag', 'strike', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat',
-        'hypo_depth', 'width', 'hypo_loc'
-    )
+    _slots_ = ('mag', 'strike', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat',
+               'hypo_depth', 'width', 'hypo_loc')
 
 
 class CoeffsTable(object):

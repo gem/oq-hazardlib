@@ -22,8 +22,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import SA, PGV
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.geo import Point
-from openquake.hazardlib.calc.gmf import (
-    ground_motion_fields, CorrelationButNoInterIntraStdDevs)
+from openquake.hazardlib.calc.gmf import ground_motion_fields
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.correlation import JB2009CorrelationModel
 
@@ -382,27 +381,6 @@ class GMFCalcCorrelatedTestCase(BaseGMFCalcTestCase):
         self.assertAlmostEqual(s2_intensity.mean(), mean2, delta=1e-3)
         self.assertAlmostEqual(s1_intensity.std(), intra1, delta=2e-3)
         self.assertAlmostEqual(s2_intensity.std(), intra2, delta=1e-2)
-
-    def test_correlation_with_total_stddev(self):
-        mean1 = 10
-        mean2 = 14
-        inter = 1e-300
-        intra1 = 0.2
-        intra2 = 1.6
-        p1 = Point(0, 0)
-        p2 = Point(0, 0.3)
-        sites = [Site(p1, mean1, False, inter, intra1),
-                 Site(p2, mean2, False, inter, intra2)]
-        self.sites = SiteCollection(sites)
-
-        numpy.random.seed(41)
-        cormo = JB2009CorrelationModel(vs30_clustering=False)
-        gsim = FakeGSIMTotalStdDev(self)
-        with self.assertRaises(CorrelationButNoInterIntraStdDevs):
-            ground_motion_fields(
-                self.rupture, self.sites, [self.imt1], gsim,
-                truncation_level=None, realizations=6000,
-                correlation_model=cormo)
 
     def test_rupture_site_filtering(self):
         mean = 10

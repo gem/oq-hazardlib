@@ -1,3 +1,17 @@
+  [Yen-Shin Chen]
+  * Make _geodetic_min_distance method accessible in order to be called in
+    get_rupture_fraction_strikeslip, and get_rupture_fraction_dipslip method
+  * Adds 'rs', 'rtheta', 'rd', 'rphi' slots to DistanceContext object
+  * Implemented ShahiBaker2013 GMPE
+  * Implemented ShahiBakerNearFault2013 GMPE
+  * Implemented get_rupture_fraction_strikeslip method to obtain 'rs' and
+    'rtheta' distances.
+  * Implemented get_rupture_fraction_dipslip method to obtain 'rd' and
+    'rphi' distances.
+  * Implemented the ground motion correlation model for PGV (GH2008 model)
+  * For ground motion correlation, if the intra-event sigma is not available
+    from GMPE, then the total sigma will be used.
+
 python-oq-hazardlib (0.20.0-0~precise01) precise; urgency=low
 
   [Michele Simionato]
@@ -32,6 +46,7 @@ python-oq-hazardlib (0.20.0-0~precise01) precise; urgency=low
   * Fixes Z1.0 units bug in Abrahamson, Silva and Kamai (2014)
   * Added modifications to Zhao (2006) inslab GMPE and implements
     Atkinson (2008') - needed for 2014 US NSHMP
+
 
   [Michele Simionato]
   * Improved the validity check on the Intensity Measure Type

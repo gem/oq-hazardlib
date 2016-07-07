@@ -20,7 +20,6 @@
 Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 """
 import numpy
-
 from openquake.baselib.python3compat import range
 from openquake.baselib.slots import with_slots
 from openquake.baselib.general import split_in_blocks

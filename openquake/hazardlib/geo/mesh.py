@@ -158,7 +158,7 @@ class Mesh(object):
 
         Uses :func:`openquake.hazardlib.geo.geodetic.min_distance`.
         """
-        return self._geodetic_min_distance(mesh, indices=False)
+        return self.geodetic_min_distance(mesh, indices=False)
 
     def get_joyner_boore_distance(self, mesh):
         """
@@ -252,13 +252,13 @@ class Mesh(object):
         and uses the same :func:`openquake.hazardlib.geo.geodetic.min_distance`
         internally.
         """
-        idxs = self._geodetic_min_distance(mesh, indices=True)
+        idxs = self.geodetic_min_distance(mesh, indices=True)
         lons = self.lons.take(idxs)
         lats = self.lats.take(idxs)
         depths = None if self.depths is None else self.depths.take(idxs)
         return Mesh(lons, lats, depths)
 
-    def _geodetic_min_distance(self, mesh, indices):
+    def geodetic_min_distance(self, mesh, indices):
         """
         Wrapper around :func:`openquake.hazardlib.geo.geodetic.min_distance`
         for two meshes: either (or both, or neither) can have empty depths.
@@ -375,6 +375,7 @@ class RectangularMesh(Mesh):
     of points but rather a sort of table of points, where index of the point
     in a mesh is related to it's position with respect to neighbouring points.
     """
+
     def __init__(self, lons, lats, depths=None):
         super(RectangularMesh, self).__init__(lons, lats, depths)
         assert lons.ndim == 2
@@ -397,7 +398,7 @@ class RectangularMesh(Mesh):
         num_cols = len(points[0])
         for i, row in enumerate(points):
             assert len(row) == num_cols, \
-                   'lists of points are not of uniform length'
+                'lists of points are not of uniform length'
             for j, point in enumerate(row):
                 lons[i][j] = point.longitude
                 lats[i][j] = point.latitude
@@ -493,8 +494,8 @@ class RectangularMesh(Mesh):
             else:
                 # even number of columns, need to take two middle
                 # points on the middle row
-                lon1, lon2 = self.lons[mid_row][mid_col - 1 : mid_col + 1]
-                lat1, lat2 = self.lats[mid_row][mid_col - 1 : mid_col + 1]
+                lon1, lon2 = self.lons[mid_row][mid_col - 1: mid_col + 1]
+                lat1, lat2 = self.lats[mid_row][mid_col - 1: mid_col + 1]
                 if self.depths is not None:
                     depth1 = self.depths[mid_row][mid_col - 1]
                     depth2 = self.depths[mid_row][mid_col]
@@ -502,8 +503,8 @@ class RectangularMesh(Mesh):
             # there are even number of rows. take the row just above
             # and the one just below the middle and find middle point
             # of each
-            submesh1 = self[mid_row - 1 : mid_row]
-            submesh2 = self[mid_row : mid_row + 1]
+            submesh1 = self[mid_row - 1: mid_row]
+            submesh2 = self[mid_row: mid_row + 1]
             p1, p2 = submesh1.get_middle_point(), submesh2.get_middle_point()
             lon1, lat1, depth1 = p1.longitude, p1.latitude, p1.depth
             lon2, lat2, depth2 = p2.longitude, p2.latitude, p2.depth

@@ -20,7 +20,7 @@ spatially-distributed ground-shaking intensities.
 import abc
 import numpy
 
-from openquake.hazardlib.imt import SA, PGA
+from openquake.hazardlib.imt import SA, PGA, PGV
 from openquake.baselib.python3compat import with_metaclass
 
 
@@ -121,7 +121,6 @@ class JB2009CorrelationModel(BaseCorrelationModel):
         if isinstance(imt, SA):
             period = imt.period
         else:
-            assert isinstance(imt, PGA), imt
             period = 0
 
         # formulae are from page 1700
@@ -144,3 +143,24 @@ class JB2009CorrelationModel(BaseCorrelationModel):
         See :meth:`BaseCorrelationModel.get_lower_triangle_correlation_matrix`.
         """
         return numpy.linalg.cholesky(self._get_correlation_matrix(sites, imt))
+
+
+class GH2008PGVCorrelationModel(JB2009CorrelationModel):
+    """
+    "Correlation model for spatially distributed ground-motion intensities"
+    by Goda and Hong, 2008 for PGV only herein
+
+    """
+    def _get_correlation_model(self, distances, imt):
+        """
+        Returns the correlation model for a set of distances, given the
+        appropriate period
+
+        :param numpy.ndarray distances:
+            Distance matrix
+
+        :param float period:
+            Period of spectral acceleration
+        """
+
+        return numpy.exp(-0.62 * numpy.power(distances, 0.5))

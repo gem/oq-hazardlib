@@ -42,6 +42,7 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
     Another way to construct the surface object is to call
     :meth:`from_fault_data`.
     """
+
     def __init__(self, mesh):
         super(SimpleFaultSurface, self).__init__()
         self.mesh = mesh
