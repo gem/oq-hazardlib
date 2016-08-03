@@ -2,6 +2,13 @@
   * Adds module for ground motion intensity conversion equations (GMICEs)
   * Implements Worden et al., (2012) GMICE
   
+  [Michele Simionato]
+  * Replaced pydoc.locate with a call to importlib to work around a QGIS issue
+  * Fixed the encode/decode functions in baselib.python3compat
+
+  [Daniele Viganò]
+  * Added Python 3 compatibility to speedups
+
   [Trevor Allen/Graeme Weatherill]
   * Adds Queen Charlotte strike slip magnitude scaling relation (WC1994_QCSS)
 
