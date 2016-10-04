@@ -11,8 +11,9 @@ from openquake.hazardlib.gsim.base import ContextMaker
 
 class DsgMatrix():
     """
-    A container for the information needed and produced during a disaggregation
-    analysis. Some methods for updating information is are also available.
+    A container for the information needed and the one produced during a
+    disaggregation analysis. Some methods for updating information are also
+    available.
     """
     def __init__(self, src_ids, trt_ids, mag_bins, dst_bins, eps_bins,
                  lon_bins, lat_bins):
@@ -41,10 +42,19 @@ class DsgMatrix():
         if self.darr is None:
             self._create_darr()
 
-
     def add_contribute(self, mag, dst, eps, trt_id, src_id, lon, lat, pnoe):
         """
+        This method adds to the disaggregation dictionary the contribution
+        provided by a rupture described in terms of the following parameters:
+        :parameter mag:
+        :parameter dst:
+        :parameter eps:
+        :parameter trt_id:
+        :parameter src_id:
+        :parameter lon:
+        :parameter lat:
         """
+        # Get indexes
         idx_mag = self._get_idx('mag', mag)
         idx_dst = self._get_idx('dst', dst)
         idx_eps = self._get_idx('eps', eps)
@@ -52,23 +62,32 @@ class DsgMatrix():
         idx_src = self._get_src_key(src_id)
         idx_lon = self._get_idx('lon', lon)
         idx_lat = self._get_idx('lat', lat)
-
-        #print idx_mag, idx_dst, idx_eps, idx_trt, idx_src
+        # Create the key for the current set of parameters
         key = ("%04d"*7) % (idx_mag, idx_dst, idx_eps, idx_trt, idx_src,
                             idx_lon, idx_lat)
-        #print mag, dst, eps, trt_id, src_id, key, pnoe,
-
+        # Update the dictionary (note that for simplicity at the moment we
+        # consider only the case of independent sources and ruptures).
+        # TODO include groups and aggregate probabilities accordingly
         if key in self.pdic:
             self.pdic[key] = 1. - (1. - self.pdic[key]) * pnoe
         else:
             self.pdic[key] = 1. - pnoe
 
-        #    print self.pdic[key],
-        #print ''
+    def get_values_from_key(self, key):
+        """
+        This method returns the (binned) values of the parameters used to
+        populate the disaggregation dictionary.
 
-    def get_value_from_key(self, key):
+        :parameter key:
+            A key in self.pdic.keys()
+        :returns:
+            A tuple with the following format:
+            (mag, dst, eps, trt, src_id, lon, lat)
         """
-        """
+        # Check that the key is used in the disaggregation dictionary
+        assert key in set(self.pdic.keys())
+        # Split the key into various parts. Each one identifies the index of
+        # a bin in the histogram describing one property of the rupture
         idx = 0
         mag_str = key[idx:idx+4]
         idx += 4
@@ -83,7 +102,7 @@ class DsgMatrix():
         lon_str = key[idx:idx+4]
         idx += 4
         lat_str = key[idx:idx+4]
-
+        # Get values of the parameters from the various indexes
         mag_val = self._get_val('mag', mag_str)
         print mag_val, mag_str
         dst_val = self._get_val('dst', dst_str)
@@ -92,6 +111,8 @@ class DsgMatrix():
         print eps_val, eps_str
         lon_val = self._get_val('lon', lon_str)
         print lon_val
+
+        return
 
     def _get_src_key(self, src):
         if src not in self.src_dict:
