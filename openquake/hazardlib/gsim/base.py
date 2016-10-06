@@ -130,6 +130,8 @@ def get_distances(rupture, mesh, param='rjb'):
         dist = rupture.hypocenter.distance_to_mesh(mesh, with_depths=False)
     elif param == 'rcdpp':
         dist = rupture.get_cdppvalue(mesh)
+    elif param == 'azimuth':
+        dist = rupture.surface.get_azimuth(mesh)
     else:
         raise ValueError('Unknown distance measure %r' % param)
     return dist
@@ -181,6 +183,7 @@ class ContextMaker(object):
         """
         dctx = DistancesContext()
         for param in self.REQUIRES_DISTANCES | set(['rjb']):
+            print param
             if param in dist_dict:  # already computed distances
                 distances = dist_dict[param]
             else:

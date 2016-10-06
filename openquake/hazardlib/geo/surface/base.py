@@ -274,6 +274,18 @@ class BaseQuadrilateralSurface(with_metaclass(abc.ABCMeta, BaseSurface)):
     def __init__(self):
         self._mesh = None
 
+    def get_azimuth(self, mesh):
+        """
+        """
+        strike = self.get_strike()
+        hypocenter = self.get_middle_point()
+        # This is th azimuth from the north
+        azim = geodetic.azimuth(hypocenter.longitude, hypocenter.latitude,
+                                mesh.lons, mesh.lats)
+        # Compute the azimuth from the fault strike
+        rel_azi = (azim - strike) % 360
+        return rel_azi
+
     def get_min_distance(self, mesh):
         """
         See :meth:`superclass method
