@@ -175,8 +175,8 @@ class DsgMatrix():
 
 def dsgr(sources, site, imt, iml, gsims, dsgmtx, truncation_level,
          n_epsilons,
-         source_site_filter=filters.source_site_noop_filter,
-         rupture_site_filter=filters.rupture_site_noop_filter):
+         source_site_filter='SourceSitesFilter',
+         maximum_distance=None,):
     """
     Disaggregation calculator
     """
@@ -184,22 +184,30 @@ def dsgr(sources, site, imt, iml, gsims, dsgmtx, truncation_level,
     ponet = 1.0
     dsgm = copy.deepcopy(dsgmtx)
 
-    sitecol = SiteCollection([site])
-    sitemesh = sitecol.mesh
+    sites = SiteCollection([site])
+    sitemesh = sites.mesh
 
-    sources_sites = ((source, sitecol) for source in sources)
+    if source_site_filter == 'SourceSitesFilter':  # default
+        source_site_filter = (
+            filters.SourceSitesFilter(maximum_distance)
+            if maximum_distance else filters.source_site_noop_filter)
+
+    _next_trt_num = 0
+    trt_nums = {}
+    # here we ignore filtered site collection because either it is the same
+    # as the original one (with one site), or the source/rupture is filtered
+    # out and doesn't show up in the filter's output
     for src_idx, (source, s_sites) in \
-            enumerate(source_site_filter(sources_sites)):
+            enumerate(source_site_filter(sources, sites)):
         try:
 
             tect_reg = source.tectonic_region_type
             gsim = gsims[tect_reg]
             cmaker = ContextMaker([gsim])
 
-            ruptures_sites = ((rupture, s_sites)
-                              for rupture in source.iter_ruptures())
-
-            for rupture, r_sites in rupture_site_filter(ruptures_sites):
+            for rupture in source.iter_ruptures():
+                # extract rupture parameters of interest
+                # mags.append(rupture.mag)
                 [jb_dist] = rupture.surface.get_joyner_boore_distance(sitemesh)
                 [closest_point] = rupture.surface.get_closest_points(sitemesh)
 
@@ -215,7 +223,7 @@ def dsgr(sources, site, imt, iml, gsims, dsgmtx, truncation_level,
                 # compute conditional probability of exceeding iml given
                 # the current rupture, and different epsilon level, that is
                 # ``P(IMT >= iml | rup, epsilon_bin)`` for each of epsilon bins
-                sctx, rctx, dctx = cmaker.make_contexts(sitecol, rupture)
+                sctx, rctx, dctx = cmaker.make_contexts(s_sites, rupture)
 
                 [poes_given_rup_eps] = gsim.disaggregate_poe(
                     sctx, rctx, dctx, imt, iml, truncation_level, n_epsilons
