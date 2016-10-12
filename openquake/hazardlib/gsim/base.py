@@ -183,7 +183,6 @@ class ContextMaker(object):
         """
         dctx = DistancesContext()
         for param in self.REQUIRES_DISTANCES | set(['rjb']):
-            print param
             if param in dist_dict:  # already computed distances
                 distances = dist_dict[param]
             else:
