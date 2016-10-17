@@ -35,7 +35,6 @@ import collections
 
 import numpy
 from decorator import decorator
-from openquake.baselib.python3compat import dtype
 
 F64 = numpy.float64
 
@@ -228,21 +227,6 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1,
     return block_splitter(items, math.ceil(total_weight / hint), weight, key)
 
 
-def assert_close_seq(seq1, seq2, rtol, atol, context=None):
-    """
-    Compare two sequences of the same length.
-
-    :param seq1: a sequence
-    :param seq2: another sequence
-    :param rtol: relative tolerance
-    :param atol: absolute tolerance
-    """
-    assert len(seq1) == len(seq2), 'Lists of different lenghts: %d != %d' % (
-        len(seq1), len(seq2))
-    for x, y in zip(seq1, seq2):
-        assert_close(x, y, rtol, atol, context)
-
-
 def assert_close(a, b, rtol=1e-07, atol=0, context=None):
     """
     Compare for equality up to a given precision two composite objects
@@ -258,22 +242,31 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
         # shortcut
         numpy.testing.assert_allclose(a, b, rtol, atol)
         return
-    if a == b:  # another shortcut
+    if isinstance(a, (str, bytes, int)):
+        # another shortcut
+        assert a == b
         return
     if hasattr(a, '_slots_'):  # record-like objects
-        assert_close_seq(a._slots_, b._slots_, rtol, atol, a)
-        for x, y in zip(a._slots_, b._slots_):
-            assert_close(getattr(a, x), getattr(b, y), rtol, atol, x)
+        assert a._slots_ == b._slots_
+        for x in a._slots_:
+            assert_close(getattr(a, x), getattr(b, x), rtol, atol, x)
         return
-    if isinstance(a, collections.Mapping):  # dict-like objects
-        assert_close_seq(a.keys(), b.keys(), rtol, atol, a)
-        assert_close_seq(a.values(), b.values(), rtol, atol, a)
-        return
-    if hasattr(a, '__iter__'):  # iterable objects
-        assert_close_seq(list(a), list(b), rtol, atol, a)
+    if hasattr(a, 'keys'):  # dict-like objects
+        assert a.keys() == b.keys()
+        for x in a:
+            assert_close(a[x], b[x], rtol, atol, x)
         return
     if hasattr(a, '__dict__'):  # objects with an attribute dictionary
         assert_close(vars(a), vars(b), context=a)
+        return
+    if hasattr(a, '__iter__'):  # iterable objects
+        xs, ys = list(a), list(b)
+        assert len(xs) == len(ys), ('Lists of different lenghts: %d != %d'
+                                    % (len(xs), len(ys)))
+        for x, y in zip(xs, ys):
+            assert_close(x, y, rtol, atol, x)
+        return
+    if a == b:  # last attempt to avoid raising the exception
         return
     ctx = '' if context is None else 'in context ' + repr(context)
     raise AssertionError('%r != %r %s' % (a, b, ctx))
@@ -575,7 +568,7 @@ def _slicedict_n(imt_dt):
     slicedic = {}
     for imt in imt_dt.names:
         shp = imt_dt[imt].shape
-        n1 = n + shp[0] if shp else 1
+        n1 = n + (shp[0] if shp else 1)
         slicedic[imt] = slice(n, n1)
         n = n1
     return slicedic, n
@@ -597,13 +590,30 @@ class DictArray(collections.Mapping):
     The DictArray maintains the lexicographic order of the keys.
     """
     def __init__(self, imtls):
-        self.imt_dt = dt = dtype(
-            [(imt, F64, len(imls) if hasattr(imls, '__len__') else 1)
+        self.imt_dt = dt = numpy.dtype(
+            [(str(imt), F64, len(imls) if hasattr(imls, '__len__') else 1)
              for imt, imls in sorted(imtls.items())])
         self.slicedic, num_levels = _slicedict_n(dt)
         self.array = numpy.zeros(num_levels, F64)
         for imt, imls in imtls.items():
             self[imt] = imls
+
+    def new(self, array):
+        """
+        Convert an array of compatible length into a DictArray:
+
+        >>> d = DictArray({'PGA': [0.01, 0.02, 0.04], 'PGV': [0.1, 0.2]})
+        >>> d.new(numpy.arange(0, 5, 1))  # array of lenght 5 = 3 + 2
+        <DictArray
+        PGA: [0 1 2]
+        PGV: [3 4]>
+        """
+        assert len(self.array) == len(array)
+        arr = object.__new__(self.__class__)
+        arr.imt_dt = self.imt_dt
+        arr.slicedic = self.slicedic
+        arr.array = array
+        return arr
 
     def __getitem__(self, imt):
         return self.array[self.slicedic[imt]]
@@ -626,8 +636,9 @@ class DictArray(collections.Mapping):
 
     def __fromh5__(self, carray, attrs):
         self.array = carray[:].view(F64)
-        self.imt_dt = dt = dtype(
-            [(imt, F64, len(carray[0][imt])) for imt in carray.dtype.names])
+        self.imt_dt = dt = numpy.dtype(
+            [(str(imt), F64, len(carray[0][imt]))
+             for imt in carray.dtype.names])
         self.slicedic, num_levels = _slicedict_n(dt)
         for imt in carray.dtype.names:
             self[imt] = carray[0][imt]

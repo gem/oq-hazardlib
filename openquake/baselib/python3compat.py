@@ -25,7 +25,6 @@ from __future__ import print_function
 import os
 import sys
 import math
-import numpy
 import importlib
 import subprocess
 
@@ -64,11 +63,16 @@ def decode(val):
 if PY2:
     import cPickle as pickle
     import ConfigParser as configparser
-    from itertools import izip as zip
+    from itertools import izip
 
     range = xrange
     round = round
     unicode = unicode
+
+    def zip(arg, *args):
+        for a in args:
+            assert len(a) == len(arg), (len(a), len(arg))
+        return izip(arg, *args)
 
     # taken from six
     def exec_(_code_, _globs_=None, _locs_=None):
@@ -90,12 +94,17 @@ def raise_(tp, value=None, tb=None):
 
 else:  # Python 3
     import pickle
+    import builtins
     import configparser
     exec_ = eval('exec')
 
-    zip = zip
     range = range
     unicode = str
+
+    def zip(arg, *args):
+        for a in args:
+            assert len(a) == len(arg), (len(a), len(arg))
+        return builtins.zip(arg, *args)
 
     def round(x, d=0):
         p = 10 ** d
@@ -153,25 +162,6 @@ def check_syntax(pkg):
                 else:
                     ok += 1
     print('Checked %d ok, %d wrong modules' % (ok, err))
-
-
-def dtype(arglist):
-    """
-    Version of numpy.dtype working both in Python 2 and 3.
-
-    :param arglist:
-         list of pairs (name, dtype) where name must be bytes in Python 2 and
-         str in Python 3
-    :returns: a numpy dtype
-    """
-    lst = []
-    for arg in arglist:
-        if PY2:
-            newarg = (encode(arg[0]),) + arg[1:]
-        else:  # Python 3
-            newarg = (decode(arg[0]),) + arg[1:]
-        lst.append(newarg)
-    return numpy.dtype(lst)
 
 
 if __name__ == '__main__':

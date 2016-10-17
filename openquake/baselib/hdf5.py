@@ -31,51 +31,26 @@ vbytes = h5py.special_dtype(vlen=bytes)
 vstr = h5py.special_dtype(vlen=str)
 
 
-class Hdf5Dataset(object):
+def create(hdf5, name, dtype, shape=(None,), compression=None,
+           fillvalue=0, attrs=None):
     """
-    Little wrapper around an (extendable) HDF5 dataset. Extendable datasets
-    are useful for logging information incrementally into an HDF5 file.
+    :param hdf5: a h5py.File object
+    :param name: an hdf5 key string
+    :param dtype: dtype of the dataset (usually composite)
+    :param shape: shape of the dataset (can be extendable)
+    :param compression: None or 'gzip' are recommended
+    :param attrs: dictionary of attributes of the dataset
+    :returns: a HDF5 dataset
     """
-    @classmethod
-    def create(cls, hdf5, name, dtype, shape=None, compression=None):
-        """
-        :param hdf5: a h5py.File object
-        :param name: an hdf5 key string
-        :param dtype: dtype of the dataset (usually composite)
-        :param shape: shape of the dataset (if None, the dataset is extendable)
-        :param compression: None or 'gzip' are recommended
-        """
-        if shape is None:  # extendable dataset
-            dset = hdf5.create_dataset(
-                name, (0,), dtype, chunks=True, maxshape=(None,))
-        else:  # fixed-shape dataset
-            dset = hdf5.create_dataset(name, shape, dtype)
-        return cls(dset)
-
-    def __init__(self, dset):
-        self.dset = dset
-        self.file = dset.file
-        self.name = dset.name
-        self.dtype = dset.dtype
-        self.attrs = dset.attrs
-        self.length = len(dset)
-
-    def extend(self, array):
-        """
-        Extend the dataset with the given array, which must have
-        the expected dtype. This method will give an error if used
-        with a fixed-shape dataset.
-        """
-        newlength = self.length + len(array)
-        self.dset.resize((newlength,))
-        self.dset[self.length:newlength] = array
-        self.length = newlength
-
-    def append(self, tup):
-        """
-        Append a compatible tuple of data to the underlying dataset
-        """
-        self.extend(numpy.array([tup], self.dtype))
+    if shape[0] is None:  # extendable dataset
+        dset = hdf5.create_dataset(
+            name, (0,) + shape[1:], dtype, chunks=True, maxshape=shape)
+    else:  # fixed-shape dataset
+        dset = hdf5.create_dataset(name, shape, dtype, fillvalue=fillvalue)
+    if attrs:
+        for k, v in attrs.items():
+            dset.attrs[k] = v
+    return dset
 
 
 def extend(dset, array):
@@ -84,8 +59,22 @@ def extend(dset, array):
     """
     length = len(dset)
     newlength = length + len(array)
-    dset.resize((newlength,))
+    dset.resize((newlength,) + array.shape[1:])
     dset[length:newlength] = array
+
+
+def extend3(hdf5path, key, array):
+    """
+    Extend an HDF5 file dataset with the given array
+    """
+    with h5py.File(hdf5path) as h5:
+        try:
+            dset = h5[key]
+        except KeyError:
+            dset = create(h5, key, array.dtype,
+                          shape=(None,) + array.shape[1:])
+        extend(dset, array)
+        h5.flush()
 
 
 class LiteralAttrs(object):
@@ -222,8 +211,9 @@ class File(h5py.File):
                 self[key] = v
         else:
             super(File, self).__setitem__(path, obj)
-        a = super(File, self).__getitem__(path).attrs
         if pyclass:
+            self.flush()  # make sure it is fully saved
+            a = super(File, self).__getitem__(path).attrs
             a['__pyclass__'] = pyclass
             for k, v in sorted(attrs.items()):
                 a[k] = v
