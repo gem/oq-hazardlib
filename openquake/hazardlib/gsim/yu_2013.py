@@ -68,7 +68,7 @@ class YuEtAl2013(GMPE):
 
      #: Required distance measure is hypocentral distance,
      #: see equation 1 page 834.
-     REQUIRES_DISTANCES = set(('repi', 'azimuth'))
+     REQUIRES_DISTANCES = set(('rhypo', 'azimuth'))
 
      def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
          """
@@ -107,8 +107,8 @@ class YuEtAl2013(GMPE):
          # Compute the mean value (i.e. natural logarithm of ground motion)
          mag = rup.mag
 
-         mean1 = a1ca + a1cb * mag + a1cc * np.log10(dists.repi + a1cd * np.exp(a1ce * mag))
-         mean2 = a2ca + a2cb * mag + a2cc * np.log10(dists.repi + a2cd * np.exp(a2ce * mag))
+         mean1 = a1ca + a1cb * mag + a1cc * np.log10(dists.rhypo + a1cd * np.exp(a1ce * mag))
+         mean2 = a2ca + a2cb * mag + a2cc * np.log10(dists.rhypo + a2cd * np.exp(a2ce * mag))
          x = 10**mean1 * 10**mean1 * np.sin(np.radians(dists.azimuth)) * np.sin(np.radians(dists.azimuth))
          y = 10**mean2 * 10**mean2 * np.cos(np.radians(dists.azimuth)) * np.cos(np.radians(dists.azimuth))
          mean = 10**mean1 * 10**mean2 / np.sqrt(x+y)
@@ -118,7 +118,7 @@ class YuEtAl2013(GMPE):
              mean = mean/g/100
 
          # Get the standard deviation
-         stddevs = self._compute_std(C, stddev_types, len(dists.repi))
+         stddevs = self._compute_std(C, stddev_types, len(dists.rhypo))
          # Return results
          return np.log(mean), stddevs
 
@@ -135,7 +135,7 @@ class YuEtAl2013(GMPE):
      """)
 
 class YuEtAl2013Tibetan(YuEtAl2013):
-     
+
      DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
      COEFFS = CoeffsTable(sa_damping=5, table="""\
          IMT        a      b       c      d      e     ua     ub      uc     ud     ue     ma     mb      mc     md     me     ia     ib         ic     id     ie   sigma
@@ -144,7 +144,7 @@ class YuEtAl2013Tibetan(YuEtAl2013):
      """)
 
 class YuEtAl2013Eastern(YuEtAl2013):
-    
+
      DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
      COEFFS = CoeffsTable(sa_damping=5, table="""\
          IMT        a      b       c      d      e     ua     ub      uc     ud     ue     ma     mb      mc     md     me     ia     ib         ic     id     ie   sigma
@@ -161,6 +161,7 @@ class YuEtAl2013Stable(YuEtAl2013):
          PGA    2.417  0.498  -2.079  2.802  0.295  3.706  0.298  -2.079  2.802  0.295  1.715  0.471  -1.723  1.295  0.331  2.690  0.321  -1.723  1.295  0.331   0.236
          PGV    0.093  0.621  -1.889  2.802  0.295  1.640  0.382  -1.889  2.802  0.295 -0.589  0.601  -1.559  1.295  0.331  0.671  0.407  -1.559  1.295  0.331   0.271
      """)
+
 
 
 
