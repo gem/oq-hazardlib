@@ -1,5 +1,9 @@
+python-oq-hazardlib (0.21.1-0~precise01) precise; urgency=low
+
   [Michele Simionato]
   * Fixed a 32 bit issue when the FilteredSiteCollection
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 02 Nov 2016 10:04:01 +0100
 
 python-oq-hazardlib (0.21.0-0~precise01) precise; urgency=low
 
