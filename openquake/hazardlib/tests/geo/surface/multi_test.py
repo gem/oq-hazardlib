@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2013-2016 GEM Foundation
+# Copyright (C) 2013-2017 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -13,11 +13,15 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import sys
 import unittest
 import numpy
 
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.geo import Mesh, Point, PlanarSurface
+
+if sys.platform == 'win32':
+    raise unittest.SkipTest('temporarily skipped on Windows')
 
 
 class _BaseMultiTestCase(unittest.TestCase):

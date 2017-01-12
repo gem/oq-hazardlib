@@ -1,6 +1,6 @@
 # coding: utf-8
 # The Hazard Library
-# Copyright (C) 2012-2016 GEM Foundation
+# Copyright (C) 2012-2017 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -32,6 +32,8 @@ from openquake.hazardlib.near_fault import (get_plane_equation, projection_pp,
                                             directp, average_s_rad,
                                             isochone_ratio)
 from openquake.baselib.python3compat import with_metaclass
+
+pmf_dt = numpy.dtype([('prob', float), ('occ', numpy.uint32)])
 
 
 @with_slots
@@ -174,6 +176,12 @@ class NonParametricProbabilisticRupture(BaseProbabilisticRupture):
         )
         self.pmf = pmf
 
+    def pmf_array(self):
+        """
+        Return a composite array with the Probability Mass Function
+        """
+        return numpy.array(self.data, pmf_dt)
+
     def get_probability_no_exceedance(self, poes):
         """
         See :meth:`superclass method
@@ -192,12 +200,14 @@ class NonParametricProbabilisticRupture(BaseProbabilisticRupture):
         ``p(k|T)`` is given by the constructor's parameter ``pmf``, and
         ``p(X<x|rup)`` is computed as ``1 - poes``.
         """
+        # Converting from 1d to 2d
+        if len(poes.shape) == 1:
+            poes = numpy.reshape(poes, (-1, len(poes)))
         p_kT = numpy.array([float(p) for (p, _) in self.pmf.data])
         prob_no_exceed = numpy.array(
             [v * ((1 - poes) ** i) for i, v in enumerate(p_kT)]
         )
         prob_no_exceed = numpy.sum(prob_no_exceed, axis=0)
-
         return prob_no_exceed
 
     def sample_number_of_occurrences(self):

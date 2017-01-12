@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2016 GEM Foundation
+# Copyright (C) 2012-2017 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -55,34 +55,6 @@ class StochasticEventSetTestCase(unittest.TestCase):
                 [self.source1, self.source2]
             ))
         self.assertEqual(ses, [self.r1_1, self.r1_2, self.r1_2, self.r2_1])
-
-    def test_filter(self):
-        def extract_first_source(sources, sites):
-            for source in sources:
-                yield source, None
-                break
-        fake_sites = [1, 2, 3]
-        ses = list(
-            stochastic_event_set(
-                [self.source1, self.source2],
-                fake_sites, extract_first_source
-            ))
-        self.assertEqual(ses, [self.r1_1, self.r1_2, self.r1_2])
-
-        def extract_first_rupture(ruptures, sites):
-            for rupture in ruptures:
-                yield rupture, None
-                break
-        ses = list(
-            stochastic_event_set(
-                [self.source1, self.source2],
-                fake_sites,
-                extract_first_source,
-                extract_first_rupture
-            ))
-        self.assertEqual(ses, [self.r1_1])
-        self.source1 = self.FakeSource(1, [self.r1_1, self.r1_0, self.r1_2])
-        self.source2 = self.FakeSource(2, [self.r2_1])
 
     def test(self):
         ses = list(stochastic_event_set(

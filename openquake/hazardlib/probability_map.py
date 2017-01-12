@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (c) 2016, GEM Foundation
+#  Copyright (c) 2016-2017 GEM Foundation
 
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
@@ -16,7 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from openquake.baselib.python3compat import zip
-from openquake.hazardlib.stats import mean_quantiles
+from openquake.hazardlib.stats import compute_stats
 import numpy
 
 F64 = numpy.float64
@@ -55,6 +55,11 @@ class ProbabilityCurve(object):
             return self.__class__(1. - (1. - self.array) * (1. - other.array))
     __ror__ = __or__
 
+    def __iadd__(self, other):
+        # this is used when composing mutually exclusive probabilities
+        self.array += other.array
+        return self
+
     def __mul__(self, other):
         if isinstance(other, self.__class__):
             return self.__class__(self.array * other.array)
@@ -76,12 +81,12 @@ class ProbabilityCurve(object):
     # used when exporting to HDF5
     def convert(self, imtls, idx=0):
         """
-        Convert a probability curve into a record of dtype `imtls.imt_dt`.
+        Convert a probability curve into a record of dtype `imtls.dt`.
 
         :param imtls: DictArray instance
         :param idx: extract the data corresponding to the given inner index
         """
-        curve = numpy.zeros(1, imtls.imt_dt)
+        curve = numpy.zeros(1, imtls.dt)
         for imt in imtls:
             curve[imt] = self.array[imtls.slicedic[imt], idx]
         return curve[0]
@@ -162,7 +167,7 @@ class ProbabilityMap(dict):
     def convert(self, imtls, nsites=None, idx=0):
         """
         Convert a probability map into a composite array of length `nsites`
-        and dtype `imtls.imt_dt`.
+        and dtype `imtls.dt`.
 
         :param imtls: DictArray instance
         :param nsites: the total number of sites (or None)
@@ -170,7 +175,7 @@ class ProbabilityMap(dict):
         """
         if nsites is None:
             nsites = len(self)
-        curves = numpy.zeros(nsites, imtls.imt_dt)
+        curves = numpy.zeros(nsites, imtls.dt)
         for imt in curves.dtype.names:
             curves_by_imt = curves[imt]
             for sid in self:
@@ -212,6 +217,7 @@ class ProbabilityMap(dict):
 
     def __or__(self, other):
         new = self.__class__(self.shape_y, self.shape_z)
+        new.update(self)
         new |= other
         return new
 
@@ -311,7 +317,7 @@ class PmapStats(object):
             for j, sid in enumerate(sids):
                 if sid in pmap:
                     curves_by_rlz[i][j] = pmap[sid].array[:, 0]
-        mq = mean_quantiles(curves_by_rlz, self.quantiles, self.weights)
+        mq = compute_stats(curves_by_rlz, self.quantiles, self.weights)
         for i, array in enumerate(mq):
             for j, sid in numpy.ndenumerate(sids):
                 stats[sid].array[:, i] = array[j]

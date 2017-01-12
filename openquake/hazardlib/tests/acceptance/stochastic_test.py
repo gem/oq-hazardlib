@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -131,7 +131,7 @@ class StochasticEventSetTestCase(unittest.TestCase):
         ses = stochastic_event_set(
             [self.area1, self.area2],
             sites=sites,
-            source_site_filter=filters.SourceSitesFilter(100.)
+            source_site_filter=filters.SourceFilter(sites, 100.)
         )
 
         rates = self._extract_rates(ses, time_span=self.time_span,

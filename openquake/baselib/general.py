@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,6 +24,7 @@ from __future__ import division, print_function
 import os
 import sys
 import imp
+import copy
 import math
 import operator
 import warnings
@@ -35,6 +36,7 @@ import collections
 
 import numpy
 from decorator import decorator
+from openquake.baselib.python3compat import decode
 
 F64 = numpy.float64
 
@@ -156,8 +158,14 @@ def ceil(a, b):
     return int(math.ceil(float(a) / b))
 
 
-def block_splitter(items, max_weight, weight=lambda item: 1,
-                   kind=lambda item: 'Unspecified'):
+def nokey(item):
+    """
+    Dummy function to apply to items without a key
+    """
+    return 'Unspecified'
+
+
+def block_splitter(items, max_weight, weight=lambda item: 1, kind=nokey):
     """
     :param items: an iterator over items
     :param max_weight: the max weight to split on
@@ -200,8 +208,7 @@ def block_splitter(items, max_weight, weight=lambda item: 1,
         yield ws
 
 
-def split_in_blocks(sequence, hint, weight=lambda item: 1,
-                    key=lambda item: 'Unspecified'):
+def split_in_blocks(sequence, hint, weight=lambda item: 1, key=nokey):
     """
     Split the `sequence` in a number of WeightedSequences close to `hint`.
 
@@ -220,7 +227,7 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1,
     """
     if hint == 0:  # do not split
         return sequence
-    items = list(sequence)
+    items = list(sequence) if key is nokey else sorted(sequence, key=key)
     assert hint > 0, hint
     assert len(items) > 0, len(items)
     total_weight = float(sum(weight(item) for item in items))
@@ -304,7 +311,7 @@ def git_suffix(fname):
         gh = subprocess.check_output(
             ['git', 'rev-parse', '--short', 'HEAD'],
             stderr=open(os.devnull, 'w'), cwd=os.path.dirname(fname)).strip()
-        gh = "-git" + gh if gh else ''
+        gh = "-git" + decode(gh) if gh else ''
         return gh
     except:
         # trapping everything on purpose; git may not be installed or it
@@ -486,7 +493,25 @@ class AccumDict(dict):
     {'a': 0.48, 'b': 0.6}
     >> 1.2 * prob1
     {'a': 0.48, 'b': 0.6}
+
+    It is very common to use an AccumDict of accumulators; here is an
+    example using the empty list as accumulator:
+
+    >>> acc = AccumDict(accum=[])
+    >>> acc['a'] += [1]
+    >>> acc['b'] += [2]
+    >>> sorted(acc.items())
+    [('a', [1]), ('b', [2])]
+
+    The implementation is smart enough to make (deep) copies of the
+    accumulator, therefore each key has a different accumulator, which
+    initially is the empty list (in this case).
     """
+    def __init__(self, dic=None, accum=None, **kw):
+        if dic:
+            self.update(dic)
+        self.update(kw)
+        self.accum = accum
 
     def __iadd__(self, other):
         if hasattr(other, 'items'):
@@ -552,6 +577,14 @@ class AccumDict(dict):
     def __truediv__(self, other):
         return self * (1. / other)
 
+    def __missing__(self, key):
+        if self.accum is None:
+            # no accumulator, accessing a missing key is an error
+            raise KeyError(key)
+        val = self[key] = copy.deepcopy(self.accum)
+        return val
+
+
     def apply(self, func, *extras):
         """
         >> a = AccumDict({'a': 1,  'b': 2})
@@ -590,7 +623,7 @@ class DictArray(collections.Mapping):
     The DictArray maintains the lexicographic order of the keys.
     """
     def __init__(self, imtls):
-        self.imt_dt = dt = numpy.dtype(
+        self.dt = dt = numpy.dtype(
             [(str(imt), F64, len(imls) if hasattr(imls, '__len__') else 1)
              for imt, imls in sorted(imtls.items())])
         self.slicedic, num_levels = _slicedict_n(dt)
@@ -610,7 +643,7 @@ class DictArray(collections.Mapping):
         """
         assert len(self.array) == len(array)
         arr = object.__new__(self.__class__)
-        arr.imt_dt = self.imt_dt
+        arr.dt = self.dt
         arr.slicedic = self.slicedic
         arr.array = array
         return arr
@@ -622,21 +655,21 @@ class DictArray(collections.Mapping):
         self.array[self.slicedic[imt]] = array
 
     def __iter__(self):
-        for imt in self.imt_dt.names:
+        for imt in self.dt.names:
             yield imt
 
     def __len__(self):
-        return len(self.imt_dt.names)
+        return len(self.dt.names)
 
     def __toh5__(self):
-        carray = numpy.zeros(1, self.imt_dt)
+        carray = numpy.zeros(1, self.dt)
         for imt in self:
             carray[imt] = self[imt]
         return carray, {}
 
     def __fromh5__(self, carray, attrs):
         self.array = carray[:].view(F64)
-        self.imt_dt = dt = numpy.dtype(
+        self.dt = dt = numpy.dtype(
             [(str(imt), F64, len(carray[0][imt]))
              for imt in carray.dtype.names])
         self.slicedic, num_levels = _slicedict_n(dt)

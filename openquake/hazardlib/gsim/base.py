@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2016 GEM Foundation
+# Copyright (C) 2012-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -130,6 +130,8 @@ def get_distances(rupture, mesh, param='rjb'):
         dist = rupture.hypocenter.distance_to_mesh(mesh, with_depths=False)
     elif param == 'rcdpp':
         dist = rupture.get_cdppvalue(mesh)
+    elif param == 'azimuth':
+        dist = rupture.surface.get_azimuth(mesh)
     else:
         raise ValueError('Unknown distance measure %r' % param)
     return dist

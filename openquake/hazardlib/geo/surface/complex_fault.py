@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2016 GEM Foundation
+# Copyright (C) 2012-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -48,7 +48,7 @@ class ComplexFaultSurface(BaseQuadrilateralSurface):
     def __init__(self, mesh):
         super(ComplexFaultSurface, self).__init__()
         self.mesh = mesh
-        assert not 1 in self.mesh.shape
+        assert 1 not in self.mesh.shape
         self.strike = self.dip = None
 
         # A common user error is to create a ComplexFaultSourceSurface
@@ -270,9 +270,9 @@ class ComplexFaultSurface(BaseQuadrilateralSurface):
                 (mesh_spacing, mean_width)
             )
 
-        points = list(zip(*[v_edge.resample_to_num_points(num_vert_points).points
-                       for v_edge in vert_edges]))
-        mesh = RectangularMesh.from_points_list(points)
+        points = zip(*[v_edge.resample_to_num_points(num_vert_points).points
+                       for v_edge in vert_edges])
+        mesh = RectangularMesh.from_points_list(list(points))
         assert 1 not in mesh.shape
         return cls(mesh)
 

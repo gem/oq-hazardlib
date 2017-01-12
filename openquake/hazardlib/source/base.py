@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2016 GEM Foundation
+# Copyright (C) 2012-2017 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -18,8 +18,65 @@ Module :mod:`openquake.hazardlib.source.base` defines a base class for
 seismic sources.
 """
 import abc
+import numpy
 from openquake.baselib.slots import with_slots
 from openquake.baselib.python3compat import with_metaclass
+
+
+class SourceGroup(object):
+    """
+    :param src_list:
+        A list containing seismic sources
+    :param name:
+        The name of the group
+    :param src_interdep:
+        A string specifying if the sources in this cluster are independent or
+        mutually exclusive
+    :param rup_indep:
+        A string specifying if the ruptures within each source of the cluster
+        are independent or mutually exclusive
+    :param weights:
+        A dictionary whose keys are the source IDs of the cluster and the
+        values are the weights associated with each source
+    """
+
+    @property
+    def source_id(self):
+        """Name of the source group"""
+        # alias useful for the write_source_model function
+        return self.name
+
+    def __init__(self, src_list, name, src_interdep='indep',
+                 rup_interdep='indep', srcs_weights=None, trt=''):
+        # checks
+        self._check_init_variables(src_list, name, src_interdep, rup_interdep,
+                                   srcs_weights)
+        # set instance parameters
+        self.src_list = src_list
+        self.name = name
+        self.src_interdep = src_interdep
+        self.rup_interdep = rup_interdep
+        if srcs_weights is None:
+            n = len(src_list)
+            self.srcs_weights = numpy.ones(n) / n
+        else:
+            self.srcs_weights = srcs_weights
+        self.tectonic_region_type = trt
+
+    def _check_init_variables(self, src_list, name, src_interdep, rup_interdep,
+                              srcs_weights):
+        if src_interdep not in ('indep', 'mutex'):
+            raise ValueError('source interdependence incorrect %s ' %
+                             src_interdep)
+        if rup_interdep not in ('indep', 'mutex'):
+            raise ValueError('rupture interdependence incorrect %s ' %
+                             rup_interdep)
+        # check srcs weights defined by the user
+        if srcs_weights is not None:
+            assert abs(1. - sum(srcs_weights)) < 1e-6
+
+    def __iter__(self):
+        return iter(self.src_list)
 
 
 @with_slots
@@ -50,6 +107,8 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
         Determine the source weight from the number of ruptures, by
         multiplying with the scale factor RUPTURE_WEIGHT
         """
+        if not self.num_ruptures:
+            self.num_ruptures = self.count_ruptures()
         return self.num_ruptures * self.RUPTURE_WEIGHT
 
     def __init__(self, source_id, name, tectonic_region_type):
@@ -149,6 +208,8 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
         false negatives (it's better not to filter a site out if there is some
         uncertainty about its distance).
         """
+        if integration_distance is None:  # no filtering
+            return sites
         rup_enc_poly = self.get_rupture_enclosing_polygon(integration_distance)
         return sites.filter(rup_enc_poly.intersects(sites.mesh))
 
@@ -203,8 +264,8 @@ class ParametricSeismicSource(with_metaclass(abc.ABCMeta, BaseSeismicSource)):
         and vice versa.
     :param temporal_occurrence_model:
         Instance of
-        :class:`openquake.hazardlib.tom.PoissonTOM` defining temporal occurrence
-        model for calculating rupture occurrence probabilities
+        :class:`openquake.hazardlib.tom.PoissonTOM` defining temporal
+        occurrence model for calculating rupture occurrence probabilities
 
     :raises ValueError:
         If either rupture aspect ratio or rupture mesh spacing is not positive

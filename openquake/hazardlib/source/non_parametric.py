@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2013-2016 GEM Foundation
+# Copyright (C) 2013-2017 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -46,7 +46,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
     """
     _slots_ = BaseSeismicSource._slots_ + ['data']
 
-    MODIFICATIONS = set(())
+    MODIFICATIONS = set()
 
     def __init__(self, source_id, name, tectonic_region_type, data):
         super(NonParametricSeismicSource, self). \
@@ -62,11 +62,10 @@ class NonParametricSeismicSource(BaseSeismicSource):
             Generator of instances of :class:
             `~openquake.hazardlib.source.rupture.NonParametricProbabilisticRupture`.
         """
-        for (rup, pmf) in self.data:
+        for rup, pmf in self.data:
             yield NonParametricProbabilisticRupture(
                 rup.mag, rup.rake, self.tectonic_region_type, rup.hypocenter,
-                rup.surface, rup.source_typology, pmf
-            )
+                rup.surface, rup.source_typology, pmf)
 
     def count_ruptures(self):
         """

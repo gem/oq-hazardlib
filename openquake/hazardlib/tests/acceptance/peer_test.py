@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2016 GEM Foundation
+# Copyright (C) 2012-2017 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -250,8 +250,8 @@ class Set1TestCase(unittest.TestCase):
         truncation_level = 0
         imts = {str(test_data.IMT): test_data.SET1_CASE2_IMLS}
 
-        curves = calc_hazard_curves([npss], sites, imts, gsims,
-                                    truncation_level)
+        curves = calc_hazard_curves(
+            [npss], sites, imts, gsims, truncation_level)
         s1hc, s2hc, s3hc, s4hc, s5hc, s6hc, s7hc = curves[str(test_data.IMT)]
 
         assert_hazard_curve_is(self, s1hc, test_data.SET1_CASE2_SITE1_POES,
