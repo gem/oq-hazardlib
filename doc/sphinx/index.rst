@@ -9,13 +9,6 @@ Internal structure
 .. toctree::
    :maxdepth: 3
 
-   source
-   scalerel
-   mfd
-   gsim/index
+   openquake.baselib
+   openquake.hazardlib
    gmice
-   tom
-   calc
-   site
-   probability_map           
-   other
