@@ -33,10 +33,10 @@ import scipy.stats
 from scipy.special import ndtr
 import numpy
 
-from openquake.hazardlib import const
-from openquake.hazardlib import imt as imt_module
 from openquake.baselib.general import DeprecationWarning
 from openquake.baselib.python3compat import with_metaclass
+from openquake.hazardlib import const
+from openquake.hazardlib import imt as imt_module
 
 
 class NonInstantiableError(Exception):
@@ -151,9 +151,9 @@ class ContextMaker(object):
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
 
-    def __init__(self, gsims, maximum_distance=None):
+    def __init__(self, gsims, src_filter=None):
         self.gsims = gsims
-        self.maximum_distance = maximum_distance
+        self.src_filter = src_filter
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
@@ -303,11 +303,17 @@ class ContextMaker(object):
         :returns: (close sites, close distances)
         :raises: a FarAwayRupture exception if the rupture is far away
         """
+        # fast prefiltering using rtree
+        if self.src_filter is not None:
+            sites, maxdist = self.src_filter.get_sites_maxdist(rupture)
+            if len(sites) == 0:
+                raise FarAwayRupture
+
+        # slow filtering using rjb distances
         distances = get_distances(rupture, sites.mesh, distance_type)
-        if self.maximum_distance is None:  # for sites already filtered
+        if self.src_filter is None:  # sites already filtered
             return sites, distances
-        mask = distances <= self.maximum_distance(
-            rupture.tectonic_region_type, rupture.mag)
+        mask = distances <= maxdist
         if mask.any():
             return sites.filter(mask), distances[mask]
         else:

@@ -182,12 +182,13 @@ def pmap_from_grp(
     else:  # list of sources
         trt = sources[0].tectonic_region_type
         group = SourceGroup(trt, sources, 'src_group', 'indep', 'indep')
-    maxdist = source_site_filter.integration_distance
     if hasattr(gsims, 'keys'):  # dictionary trt -> gsim
         gsims = [gsims[trt]]
+    if not hasattr(source_site_filter, 'index'):  # rebuild the index
+        source_site_filter.init()
     with GroundShakingIntensityModel.forbid_instantiation():
         imtls = DictArray(imtls)
-        cmaker = ContextMaker(gsims, maxdist)
+        cmaker = ContextMaker(gsims, source_site_filter)
         ctx_mon = monitor('making contexts', measuremem=False)
         pne_mon = monitor('computing poes', measuremem=False)
         disagg_mon = monitor('get closest points', measuremem=False)

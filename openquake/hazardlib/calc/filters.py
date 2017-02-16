@@ -72,6 +72,8 @@ from openquake.hazardlib import valid
 from openquake.hazardlib.site import FilteredSiteCollection
 from openquake.hazardlib.geo.utils import fix_lons_idl
 
+ONE_DEGREE_KM = 111.1949266
+
 
 @contextmanager
 def context(src):
@@ -158,13 +160,18 @@ class SourceFilter(object):
         self.sitecol = sitecol
         self.use_rtree = use_rtree and rtree and (
             integration_distance and sitecol is not None)
-        if self.use_rtree:
-            fixed_lons, self.idl = fix_lons_idl(sitecol.lons)
-            self.index = rtree.index.Index()
-            for sid, lon, lat in zip(sitecol.sids, fixed_lons, sitecol.lats):
-                self.index.insert(sid, (lon, lat, lon, lat))
         if rtree is None:
             logging.info('Using distance filtering [no rtree]')
+        self.init()
+
+    def init(self):
+        """Initialize the Rtree index, if any"""
+        if self.use_rtree:
+            fixed_lons, self.idl = fix_lons_idl(self.sitecol.lons)
+            self.index = rtree.index.Index()
+            for sid, lon, lat in zip(
+                    self.sitecol.sids, fixed_lons, self.sitecol.lats):
+                self.index.insert(sid, (lon, lat, lon, lat))
 
     def get_affected_box(self, src):
         """
@@ -174,7 +181,17 @@ class SourceFilter(object):
         :returns: a bounding box (min_lon, min_lat, max_lon, max_lat)
         """
         maxdist = self.integration_distance[src.tectonic_region_type]
-        min_lon, min_lat, max_lon, max_lat = src.get_bounding_box(maxdist)
+        return self.enlarge_box(src.get_bounding_box(maxdist), 0)
+
+    def enlarge_box(self, bbox, angdist):
+        """
+        :param bbox: bounding box (min_lon, min_lat, max_lon, max_lat )
+        :param angdist: angular distance
+        """
+        min_lon = bbox[0] - angdist
+        min_lat = bbox[1] - angdist
+        max_lon = bbox[2] + angdist
+        max_lat = bbox[3] + angdist
         if self.idl:  # apply IDL fix
             if min_lon < 0 and max_lon > 0:
                 return max_lon, min_lat, min_lon + 360, max_lat
@@ -203,6 +220,27 @@ class SourceFilter(object):
         source_sites = list(self([source]))
         if source_sites:
             return source_sites[0][1]
+
+    def get_sites_maxdist(self, rupture):
+        """
+        :param rupture:
+            a rupture object
+        :returns:
+            a FilteredSiteCollection with the sites within the integration
+            distance from the rupture (estimate by excess) and the distance
+            for that tectonic region type and magnitude
+        """
+        if self.integration_distance is None:
+            return self.sitecol, None
+        maxdist = self.integration_distance(
+            rupture.tectonic_region_type, rupture.mag)
+        angdist = maxdist / ONE_DEGREE_KM  # angular distance by excess
+        mesh = rupture.surface.get_mesh()
+        bbox = (mesh.lons.min(), mesh.lats.min(),
+                mesh.lons.max(), mesh.lats.max())
+        box = self.enlarge_box(bbox, angdist)
+        sids = numpy.array(sorted(self.index.intersection(box)))
+        return FilteredSiteCollection(sids, self.sitecol.complete), maxdist
 
     def __call__(self, sources, sites=None):
         if sites is None:
@@ -233,6 +271,6 @@ class SourceFilter(object):
 
     def __getstate__(self):
         return dict(integration_distance=self.integration_distance,
-                    sitecol=self.sitecol, use_rtree=False)
+                    sitecol=self.sitecol, use_rtree=self.use_rtree)
 
 source_site_noop_filter = SourceFilter(None, None)
