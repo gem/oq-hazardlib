@@ -311,7 +311,8 @@ class ContextMaker(object):
 
         # slow filtering using rjb distances
         distances = get_distances(rupture, sites.mesh, distance_type)
-        if self.src_filter is None:  # sites already filtered
+        if (self.src_filter is None or  # sites already filtered
+                self.src_filter.integration_distance is None):
             return sites, distances
         mask = distances <= maxdist
         if mask.any():
