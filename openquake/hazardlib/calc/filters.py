@@ -124,6 +124,14 @@ def filter_sites_by_distance_to_rupture(rupture, integration_distance, sites):
     return sites.filter(jb_dist <= integration_distance)
 
 
+def minimum(array_list):
+    return min(a.min() for a in array_list)
+
+
+def maximum(array_list):
+    return max(a.max() for a in array_list)
+
+
 class SourceFilter(object):
     """
     The SourceFilter uses the rtree library if available. The index is
@@ -235,9 +243,8 @@ class SourceFilter(object):
         maxdist = self.integration_distance(
             rupture.tectonic_region_type, rupture.mag)
         angdist = maxdist / ONE_DEGREE_KM  # angular distance by excess
-        mesh = rupture.surface.get_mesh()
-        bbox = (mesh.lons.min(), mesh.lats.min(),
-                mesh.lons.max(), mesh.lats.max())
+        lons, lats = rupture.surface.get_surface_boundaries()
+        bbox = minimum(lons), minimum(lats), maximum(lons), maximum(lats)
         box = self.enlarge_box(bbox, angdist)
         sids = numpy.array(sorted(self.index.intersection(box)))
         return FilteredSiteCollection(sids, self.sitecol.complete), maxdist
