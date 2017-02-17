@@ -305,7 +305,7 @@ class ContextMaker(object):
         """
         # fast prefiltering using rtree
         if self.src_filter is not None:
-            sites, maxdist = self.src_filter.get_sites_maxdist(rupture)
+            sites, maxdist = self.src_filter.get_sites_maxdist(rupture, sites)
             if len(sites) == 0:
                 raise FarAwayRupture
 

@@ -229,10 +229,12 @@ class SourceFilter(object):
         if source_sites:
             return source_sites[0][1]
 
-    def get_sites_maxdist(self, rupture):
+    def get_sites_maxdist(self, rupture, sites=None):
         """
         :param rupture:
             a rupture object
+        :param sites:
+            a FilteredSiteCollection (or None)
         :returns:
             a FilteredSiteCollection with the sites within the integration
             distance from the rupture (estimate by excess) and the distance
@@ -246,7 +248,10 @@ class SourceFilter(object):
         lons, lats = rupture.surface.get_surface_boundaries()
         bbox = minimum(lons), minimum(lats), maximum(lons), maximum(lats)
         ebox = self.enlarge_box(bbox, angdist)
-        sids = numpy.array(sorted(self.index.intersection(ebox)))
+        indices = set(self.index.intersection(ebox))
+        if sites is not None:  # consider only the subset of sites
+            indices &= set(sites.sids)
+        sids = numpy.array(sorted(indices))
         return FilteredSiteCollection(sids, self.sitecol.complete), maxdist
 
     def __call__(self, sources, sites=None):
