@@ -245,8 +245,8 @@ class SourceFilter(object):
         angdist = maxdist / ONE_DEGREE_KM  # angular distance by excess
         lons, lats = rupture.surface.get_surface_boundaries()
         bbox = minimum(lons), minimum(lats), maximum(lons), maximum(lats)
-        box = self.enlarge_box(bbox, angdist)
-        sids = numpy.array(sorted(self.index.intersection(box)))
+        ebox = self.enlarge_box(bbox, angdist)
+        sids = numpy.array(sorted(self.index.intersection(ebox)))
         return FilteredSiteCollection(sids, self.sitecol.complete), maxdist
 
     def __call__(self, sources, sites=None):
