@@ -137,6 +137,7 @@ fast sources.
 from __future__ import print_function
 import os
 import sys
+import abc
 import time
 import signal
 import socket
@@ -155,6 +156,7 @@ from openquake.baselib.general import (
     block_splitter, split_in_blocks, AccumDict, humansize)
 
 executor = ProcessPoolExecutor()
+executor.pids = ()  # set by wakup_pool
 # the num_tasks_hint is chosen to be 5 times bigger than the name of
 # cores; it is a heuristic number to get a good distribution;
 # it has no more significance than that
@@ -437,6 +439,30 @@ class IterResult(object):
         return res
 
 
+class Computer(object):
+    """
+    Abstract Base Class. Subclasses must override the methods `__call__`
+    and `gen_args`, and may override `aggregate`. They may also override
+    `__init__`: in that case they must set the `__name__` attribute.
+    """
+    def __init__(self):
+        self.__name__ = self.__class__.__name__
+
+    @abc.abstractmethod
+    def __call__(self, *args):
+        """Return a result, typically a dictionary"""
+        return {}
+
+    @abc.abstractmethod
+    def gen_args(self, *args):
+        """Yield tuples of arguments"""
+        yield ()
+
+    def aggregate(self, acc, val):
+        """Aggregate values; the default operation is the sum"""
+        return acc + val
+
+
 class Starmap(object):
     """
     A manager to submit several tasks of the same type.
@@ -451,6 +477,12 @@ class Starmap(object):
     """
     executor = executor
     task_ids = []
+
+    @classmethod
+    def run(cls, operation, args, acc=None):
+        wakeup_pool()
+        return cls(operation, operation.gen_args(*args)).reduce(
+            operation.aggregate, acc)
 
     @classmethod
     def restart(cls):
@@ -494,8 +526,10 @@ class Starmap(object):
         self.results = []
         self.sent = AccumDict()
         self.distribute = oq_distribute(oqtask)
+        # a task can be a function, a class or an instance with a __call__
         f = oqtask.__init__ if inspect.isclass(oqtask) else oqtask
-        self.argnames = inspect.getargspec(f).args
+        self.argnames = (inspect.getargspec(f).args if inspect.isfunction(f)
+                         else inspect.getargspec(oqtask.__call__).args[1:])
         if self.distribute == 'ipython' and isinstance(
                 self.executor, ProcessPoolExecutor):
             client = ipp.Client()
@@ -677,13 +711,13 @@ def _wakeup(sec):
 def wakeup_pool():
     """
     This is used at startup, only when the ProcessPoolExecutor is used,
-    to fork the processes before loading any big data structure.
-
-    :returns: the list of PIDs spawned or None
+    to fork the processes before loading any big data structure. It is
+    called once once, and adds the list of PIDs spawned to the executor.
     """
-    if oq_distribute() == 'futures':  # when using the ProcessPoolExecutor
+    if not executor.pids and oq_distribute() == 'futures':
+        # when using the ProcessPoolExecutor
         pids = Starmap(_wakeup, ((.2,) for _ in range(executor._max_workers)))
-        return list(pids)
+        executor.pids = list(pids)
 
 
 class BaseStarmap(object):
