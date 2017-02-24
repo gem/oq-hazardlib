@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import unittest
 import numpy
 import numpy.testing as npt
@@ -21,18 +22,20 @@ import numpy.testing as npt
 from openquake.baselib.general import DictArray
 from openquake.hazardlib.source import NonParametricSeismicSource
 from openquake.hazardlib.source.rupture import Rupture
+from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.geo.surface import PlanarSurface, SimpleFaultSurface
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.geodetic import point_at
 from openquake.hazardlib.calc.filters import SourceFilter
-from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves_ext
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
 from openquake.hazardlib.calc.hazard_curve import pmap_from_grp
 from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
+from openquake.hazardlib.gsim.si_midorikawa_1999 import SiMidorikawa1999SInter
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.pmf import PMF
-from openquake.hazardlib.source.base import SourceGroup
+from openquake.hazardlib.sourceconverter import SourceGroup
+from openquake.hazardlib import nrml
 
 
 def _create_rupture(distance, magnitude,
@@ -89,7 +92,6 @@ class HazardCurvesTestCase01(unittest.TestCase):
                                               PMF([(0.7, 0), (0.3, 1)]),
                                               TRT.GEOTHERMAL)
         site = Site(Point(0.0, 0.0), 800, True, z1pt0=100., z2pt5=1.)
-        site = Site(Point(0.0, 0.0), 800, True, z1pt0=100., z2pt5=1.)
         s_filter = SourceFilter(SiteCollection([site]), None)
         self.sites = s_filter
         self.imtls = DictArray({'PGA': [0.01, 0.1, 0.3]})
@@ -108,7 +110,7 @@ class HazardCurvesTestCase01(unittest.TestCase):
     def test_hazard_curve_A(self):
         # Test back-compatibility
         # Classical case i.e. independent sources in a list instance
-        curves = calc_hazard_curves_ext([self.src2],
+        curves = calc_hazard_curves([self.src2],
                                         self.sites,
                                         self.imtls,
                                         self.gsim_by_trt,
@@ -119,9 +121,10 @@ class HazardCurvesTestCase01(unittest.TestCase):
 
     def test_hazard_curve_B(self):
         # Test simple calculation
-        group = SourceGroup([self.src2], 'test', 'indep', 'indep')
+        group = SourceGroup(
+            TRT.ACTIVE_SHALLOW_CRUST, [self.src2], 'test', 'indep', 'indep')
         groups = [group]
-        curves = calc_hazard_curves_ext(groups,
+        curves = calc_hazard_curves(groups,
                                         self.sites,
                                         self.imtls,
                                         self.gsim_by_trt,
@@ -141,7 +144,8 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
                 (rupture, PMF([(0.6, 0), (0.4, 1)]))]
         src = NonParametricSeismicSource('0', 'test', TRT.ACTIVE_SHALLOW_CRUST,
                                          data)
-        group = SourceGroup([src], 'test', 'indep', 'mutex')
+        group = SourceGroup(
+            src.tectonic_region_type, [src], 'test', 'indep', 'mutex')
         crv = pmap_from_grp(group, self.sites, self.imtls,
                             gsim_by_trt, truncation_level=None)[0]
         npt.assert_almost_equal(numpy.array([0.35000, 0.32497, 0.10398]),
@@ -150,18 +154,16 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
     def test_raise_error_non_uniform_group(self):
         # Test that the uniformity of a group (in terms of tectonic region)
         # is correctly checked
-        gsim_by_trt = [SadighEtAl1997()]
-        group = SourceGroup([self.src1, self.src3], 'test', 'indep', 'indep')
-        self.assertRaises(AssertionError, pmap_from_grp, group,
-                          self.sites, self.imtls, gsim_by_trt,
-                          truncation_level=None)
+        self.assertRaises(
+            AssertionError, SourceGroup, TRT.ACTIVE_SHALLOW_CRUST,
+            [self.src1, self.src3], 'test', 'indep', 'indep')
 
 
 class HazardCurvesTestCase02(HazardCurvesTestCase01):
 
     def test_hazard_curve_A(self):
         # Test classical case i.e. independent sources in a list instance
-        curves = calc_hazard_curves_ext([self.src1],
+        curves = calc_hazard_curves([self.src1],
                                         self.sites,
                                         self.imtls,
                                         self.gsim_by_trt,
@@ -172,7 +174,7 @@ class HazardCurvesTestCase02(HazardCurvesTestCase01):
 
     def test_hazard_curve_B(self):
         # Test classical case i.e. independent sources in a list instance
-        curves = calc_hazard_curves_ext([self.src1, self.src2],
+        curves = calc_hazard_curves([self.src1, self.src2],
                                         self.sites,
                                         self.imtls,
                                         self.gsim_by_trt,
@@ -180,3 +182,18 @@ class HazardCurvesTestCase02(HazardCurvesTestCase01):
         crv = curves[0][0]
         npt.assert_almost_equal(numpy.array([0.58000, 0.53891, 0.15929]),
                                 crv, decimal=4)
+
+
+class NankaiTestCase(unittest.TestCase):
+    # use a source model for the Nankai region provided by M. Pagani
+    def test(self):
+        source_model = os.path.join(os.path.dirname(__file__), 'nankai.xml')
+        groups = nrml.parse(source_model, SourceConverter(
+            investigation_time=50., rupture_mesh_spacing=2.))
+        site = Site(Point(135.68, 35.68), 800, True, z1pt0=100., z2pt5=1.)
+        s_filter = SourceFilter(SiteCollection([site]), None)
+        imtls = DictArray({'PGV': [20, 40, 80]})
+        gsim_by_trt = {'Subduction Interface': SiMidorikawa1999SInter()}
+        hcurves = calc_hazard_curves(groups, s_filter, imtls, gsim_by_trt)
+        npt.assert_almost_equal([0.91149953, 0.12548556, 0.00177583],
+                                hcurves['PGV'][0])

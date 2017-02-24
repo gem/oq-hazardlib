@@ -137,6 +137,7 @@ fast sources.
 from __future__ import print_function
 import os
 import sys
+import abc
 import time
 import signal
 import socket
@@ -147,7 +148,6 @@ import traceback
 import functools
 import multiprocessing.dummy
 from concurrent.futures import as_completed, ProcessPoolExecutor, Future
-import decorator
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import pickle
@@ -156,6 +156,7 @@ from openquake.baselib.general import (
     block_splitter, split_in_blocks, AccumDict, humansize)
 
 executor = ProcessPoolExecutor()
+executor.pids = ()  # set by wakeup_pool
 # the num_tasks_hint is chosen to be 5 times bigger than the name of
 # cores; it is a heuristic number to get a good distribution;
 # it has no more significance than that
@@ -174,12 +175,21 @@ elif OQ_DISTRIBUTE == 'ipython':
     import ipyparallel as ipp
 
 
-def oq_distribute():
+def oq_distribute(task=None):
     """
-    Return the current value of the variable OQ_DISTRIBUTE; if undefined,
-    return 'futures'.
+    If the task has an attribute `shared_dir_on` which is false,
+    return 'futures' even if OQ_DISTRIBUTE is `celery`, otherwise
+    return the current value of the variable OQ_DISTRIBUTE;
+    if undefined, return 'futures'.
     """
-    return os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
+    env = os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
+    if hasattr(task, 'shared_dir_on'):
+        if env == 'celery' and not task.shared_dir_on:
+            logging.warn(
+                'Task `%s` will be run on the controller node only, since '
+                'no `shared_dir` has been specified' % task.__name__)
+            return 'futures'
+    return env
 
 
 def check_mem_usage(monitor=Monitor(),
@@ -375,7 +385,10 @@ class IterResult(object):
                 result = fut.result()
             else:
                 result = fut
-            if hasattr(result, 'unpickle'):
+            if isinstance(result, BaseException):
+                # this happens for instance with WorkerLostError with celery
+                raise result
+            elif hasattr(result, 'unpickle'):
                 self.received.append(len(result))
                 val, etype, mon = result.unpickle()
             else:
@@ -387,12 +400,17 @@ class IterResult(object):
             self.save_task_data(mon)
             yield val
         if self.received:
+            tot = sum(self.received)
+            max_per_task = max(self.received)
             self.progress('Received %s of data, maximum per task %s',
-                          humansize(sum(self.received)),
-                          humansize(max(self.received)))
+                          humansize(tot), humansize(max_per_task))
+            received = {'max_per_task': max_per_task, 'tot': tot}
+            tname = self.name
+            dic = {tname: {'sent': self.sent, 'received': received}}
+            mon.save_info(dic)
 
     def save_task_data(self, mon):
-        if hasattr(mon, 'weight'):
+        if mon.hdf5path and hasattr(mon, 'weight'):
             duration = mon.children[0].duration  # the task is the first child
             tup = (mon.task_no, mon.weight, duration)
             data = numpy.array([tup], self.task_data_dt)
@@ -424,6 +442,49 @@ class IterResult(object):
             else:
                 res.name = iresult.name.split('#')[0]
         return res
+
+
+class Computer(object):
+    """
+    Abstract Base Class. Subclasses must override the methods `__call__`
+    and `gen_args`, and may override `aggregate`. They may also override
+    `__init__`: in that case they must set the `hdf5path` and `__name__`
+    attributes.
+    """
+    def __init__(self, hdf5path=None):
+        self.hdf5path = hdf5path
+        self.__name__ = self.__class__.__name__
+
+    @abc.abstractmethod
+    def __call__(self, *args):
+        """Return a result, typically a dictionary"""
+        return {}
+
+    @abc.abstractmethod
+    def gen_args(self, *args):
+        """Yield tuples of arguments"""
+        yield ()
+
+    def aggregate(self, acc, val):
+        """Aggregate values; the default operation is the sum"""
+        return acc + val
+
+    def monitor(self, operation=None, autoflush=False, measuremem=False):
+        """
+        Return a :class:`openquake.baselib.performance.Monitor` instance
+        """
+        return Monitor(operation or self.__name__, self.hdf5path, autoflush,
+                       measuremem)
+
+    def run(self, *args, **kw):
+        """
+        Run the computer with the given arguments; one specify extra arguments
+        `acc` and `Starmap`.
+        """
+        acc = kw.get('acc')
+        starmap = kw.get('Starmap', Starmap)
+        wakeup_pool()  # if not already started
+        return starmap(self, self.gen_args(*args)).reduce(self.aggregate, acc)
 
 
 class Starmap(object):
@@ -482,9 +543,14 @@ class Starmap(object):
         self.name = name or oqtask.__name__
         self.results = []
         self.sent = AccumDict()
-        self.distribute = oq_distribute()
-        f = oqtask.__init__ if inspect.isclass(oqtask) else oqtask
-        self.argnames = inspect.getargspec(f).args
+        self.distribute = oq_distribute(oqtask)
+        # a task can be a function, a class or an instance with a __call__
+        if inspect.isfunction(oqtask):
+            self.argnames = inspect.getargspec(oqtask).args
+        elif inspect.isclass(oqtask):
+            self.argnames = inspect.getargspec(oqtask.__init__).args[1:]
+        else:  # instance with a __call__ method
+            self.argnames = inspect.getargspec(oqtask.__call__).args[1:]
         if self.distribute == 'ipython' and isinstance(
                 self.executor, ProcessPoolExecutor):
             client = ipp.Client()
@@ -584,7 +650,7 @@ class Starmap(object):
             nargs = ''
         if nargs == 1:
             [args] = self.task_args
-            self.progress('Executing a single task in process')
+            self.progress('Executing "%s" in process', self.name)
             fut = mkfuture(safely_call(self.task_func, args))
             return IterResult([fut], self.name)
         task_no = 0
@@ -666,17 +732,17 @@ def _wakeup(sec):
 def wakeup_pool():
     """
     This is used at startup, only when the ProcessPoolExecutor is used,
-    to fork the processes before loading any big data structure.
-
-    :returns: the list of PIDs spawned or None
+    to fork the processes before loading any big data structure. It is
+    called once once, and adds the list of PIDs spawned to the executor.
     """
-    if oq_distribute() == 'futures':  # when using the ProcessPoolExecutor
+    if not executor.pids and oq_distribute() == 'futures':
+        # when using the ProcessPoolExecutor
         pids = Starmap(_wakeup, ((.2,) for _ in range(executor._max_workers)))
-        return list(pids)
+        executor.pids = list(pids)
 
 
 class BaseStarmap(object):
-    poolfactory = staticmethod(multiprocessing.Pool)
+    poolfactory = staticmethod(lambda size: multiprocessing.Pool(size))
 
     @classmethod
     def apply(cls, func, args, concurrent_tasks=executor._max_workers * 5,
@@ -684,8 +750,8 @@ class BaseStarmap(object):
         chunks = split_in_blocks(args[0], concurrent_tasks, weight, key)
         return cls(func, (((chunk,) + args[1:]) for chunk in chunks))
 
-    def __init__(self, func, iterargs):
-        self.pool = self.poolfactory()
+    def __init__(self, func, iterargs, poolsize=None):
+        self.pool = self.poolfactory(poolsize)
         self.func = func
         allargs = list(iterargs)
         self.num_tasks = len(allargs)
@@ -710,7 +776,7 @@ class Sequential(BaseStarmap):
     """
     A sequential Starmap, useful for debugging purpose.
     """
-    def __init__(self, func, iterargs):
+    def __init__(self, func, iterargs, poolsize=None):
         self.pool = None
         self.func = func
         allargs = list(iterargs)
@@ -724,11 +790,12 @@ class Threadmap(BaseStarmap):
     MapReduce implementation based on threads. For instance
 
     >>> from collections import Counter
-    >>> c = Threadmap(Counter, [('hello',), ('world',)]).reduce()
+    >>> c = Threadmap(Counter, [('hello',), ('world',)], poolsize=4).reduce()
+    >>> sorted(c.items())
+    [('d', 1), ('e', 1), ('h', 1), ('l', 3), ('o', 2), ('r', 1), ('w', 1)]
     """
     poolfactory = staticmethod(
-        # following the same convention of the standard library, num_proc * 5
-        lambda: multiprocessing.dummy.Pool(executor._max_workers * 5))
+        lambda size: multiprocessing.dummy.Pool(size))
 
 
 class Processmap(BaseStarmap):
@@ -736,5 +803,7 @@ class Processmap(BaseStarmap):
     MapReduce implementation based on processes. For instance
 
     >>> from collections import Counter
-    >>> c = Processmap(Counter, [('hello',), ('world',)]).reduce()
+    >>> c = Processmap(Counter, [('hello',), ('world',)], poolsize=4).reduce()
+    >>> sorted(c.items())
+    [('d', 1), ('e', 1), ('h', 1), ('l', 3), ('o', 2), ('r', 1), ('w', 1)]
     """

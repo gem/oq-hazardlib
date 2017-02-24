@@ -418,6 +418,8 @@ def build_rupture_node(rupt, probs_occur):
         name = 'simpleFaultRupture'
     elif geom == 'complexFaultGeometry':
         name = 'complexFaultRupture'
+    elif geom == 'griddedSurface':
+        name = 'griddedRupture'
     return Node(name, {'probs_occur': probs_occur}, nodes=rupt_nodes)
 
 
@@ -484,7 +486,7 @@ def build_complex_fault_source_node(fault_source):
 
 @obj_to_node.add('SourceGroup')
 def build_source_group(source_group):
-    source_nodes = [obj_to_node(src) for src in source_group.src_list]
+    source_nodes = [obj_to_node(src) for src in source_group.sources]
     attrs = dict(tectonicRegion=source_group.trt)
     if source_group.name:
         attrs['name'] = source_group.name

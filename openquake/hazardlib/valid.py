@@ -28,11 +28,12 @@ import collections
 from decimal import Decimal
 
 import numpy
+from scipy.interpolate import interp1d
 
 from openquake.baselib.python3compat import with_metaclass
+from openquake.baselib.general import distinct
 from openquake.baselib import hdf5
 from openquake.hazardlib import imt, scalerel, gsim
-from openquake.baselib.general import distinct
 
 SCALEREL = scalerel.get_available_magnitude_scalerel()
 
@@ -371,15 +372,7 @@ def latitudes(value):
     return [latitude(v) for v in value.split(',')]
 
 
-def depth(value):
-    """
-    :param value: input string
-    :returns: float >= 0
-    """
-    dep = float_(value)
-    if dep < 0:
-        raise ValueError('depth %s < 0' % dep)
-    return dep
+depth = float_
 
 
 def lon_lat(value):
@@ -394,21 +387,47 @@ def lon_lat(value):
     return longitude(lon), latitude(lat)
 
 
+def point(value):
+    """
+    :param value: a tuple of coordinates as a string (2D or 3D)
+    :returns: a tuple of coordinates as a string (2D or 3D)
+    """
+    lst = value.split()
+    dim = len(lst)
+    if dim == 2:
+        return longitude(lst[0]), latitude(lst[1]), 0.
+    elif dim == 3:
+        return longitude(lst[0]), latitude(lst[1]), depth(lst[2])
+    else:
+        raise ValueError('Invalid point format: %s' % value)
+
+
 def coordinates(value):
     """
-    Convert a non-empty string into a list of lon-lat coordinates
+    Convert a non-empty string into a list of lon-lat coordinates.
+
     >>> coordinates('')
     Traceback (most recent call last):
     ...
     ValueError: Empty list of coordinates: ''
     >>> coordinates('1.1 1.2')
-    [(1.1, 1.2)]
+    [(1.1, 1.2, 0.0)]
     >>> coordinates('1.1 1.2, 2.2 2.3')
-    [(1.1, 1.2), (2.2, 2.3)]
+    [(1.1, 1.2, 0.0), (2.2, 2.3, 0.0)]
+    >>> coordinates('1.1 1.2 -0.4, 2.2 2.3 -0.5')
+    [(1.1, 1.2, -0.4), (2.2, 2.3, -0.5)]
+    >>> coordinates('0 0 0, 0 0 -1')
+    Traceback (most recent call last):
+    ...
+    ValueError: There are overlapping points in 0 0 0, 0 0 -1
     """
     if not value.strip():
         raise ValueError('Empty list of coordinates: %r' % value)
-    return list(map(lon_lat, value.split(',')))
+    points = list(map(point, value.split(',')))
+    num_distinct = len(set(pnt[:2] for pnt in points))
+    if num_distinct < len(points):
+        raise ValueError("There are overlapping points in %s" % value)
+    return points
 
 
 def wkt_polygon(value):
@@ -416,7 +435,7 @@ def wkt_polygon(value):
     Convert a string with a comma separated list of coordinates into
     a WKT polygon, by closing the ring.
     """
-    points = ['%s %s' % lon_lat for lon_lat in coordinates(value)]
+    points = ['%s %s' % (lon, lat) for lon, lat, dep in coordinates(value)]
     # close the linear polygon ring by appending the first coord to the end
     points.append(points[0])
     return 'POLYGON((%s))' % ', '.join(points)
@@ -636,6 +655,24 @@ def loss_ratios(value):
     return dic
 
 
+def logscale(x_min, x_max, n):
+    """
+    :param x_min: minumum value
+    :param x_max: maximum value
+    :param n: number of steps
+    :returns: an array of n values from x_min to x_max
+    """
+    if not (isinstance(n, int) and n > 0):
+        raise ValueError('n must be a positive integer, got %s' % n)
+    if x_min <= 0:
+        raise ValueError('x_min must be positive, got %s' % x_min)
+    if x_max <= x_min:
+        raise ValueError('x_max (%s) must be bigger than x_min (%s)' %
+                         (x_max, x_min))
+    delta = numpy.log(x_max / x_min)
+    return numpy.exp(delta * numpy.arange(n) / (n - 1)) * x_min
+
+
 def dictionary(value):
     """
     :param value:
@@ -653,16 +690,27 @@ def dictionary(value):
     Traceback (most recent call last):
        ...
     ValueError: '"vs30_clustering: true"' is not a valid Python dictionary
+    >>> dictionary('{"ls": logscale(0.01, 2, 5)}')
+    {'ls': [0.01, 0.037606030930863933, 0.14142135623730948, 0.53182958969449856, 1.9999999999999991]}
     """
     if not value:
         return {}
+    value = value.replace('logscale(', '("logscale", ')  # dirty but quick
     try:
         dic = dict(ast.literal_eval(value))
     except:
         raise ValueError('%r is not a valid Python dictionary' % value)
+    for key, val in dic.items():
+        try:
+            has_logscale = (val[0] == 'logscale')
+        except:  # no val[0]
+            continue
+        if has_logscale:
+            dic[key] = list(logscale(*val[1:]))
     return dic
 
 
+# used for the maximum distance parameter in the job.ini file
 def floatdict(value):
     """
     :param value:
@@ -678,9 +726,83 @@ def floatdict(value):
     [('active shallow crust', 250.0), ('default', 200)]
     """
     value = ast.literal_eval(value)
-    if isinstance(value, (int, float)):
+    if isinstance(value, (int, float, list)):
         return {'default': value}
     return value
+
+
+def getdefault(dic_with_default, key):
+    """
+    :param dic_with_default: a dictionary with a 'default' key
+    :param key: a key that may be present in the dictionary or not
+    :returns: the value associated to the key, or to 'default'
+    """
+    try:
+        return dic_with_default[key]
+    except KeyError:
+        return dic_with_default['default']
+
+
+def maximum_distance(value):
+    """
+    :param value:
+        input string corresponding to a valid maximum distance
+    :returns:
+        a IntegrationDistance mapping
+    """
+    return IntegrationDistance(floatdict(value))
+
+
+class IntegrationDistance(collections.Mapping):
+    """
+    Pickleable object wrapping a dictionary of integration distances per
+    tectonic region type.
+
+    >>> maxdist = IntegrationDistance({'default': [
+    ...          (1, 10), (2, 20), (3, 30), (4, 40), (5, 100), (6, 200),
+    ...          (7, 400), (8, 800)]})
+    >>> maxdist('Some TRT', mag=5.5)
+    array(150.0)
+    """
+    def __init__(self, dic):
+        self.dic = dic  # TRT -> float or list of pairs
+        self.magdist = {}  # TRT -> (magnitudes, distances)
+        for trt, value in dic.items():
+            if isinstance(value, list):  # assume a list of pairs (mag, dist)
+                value.sort()  # make sure the list is sorted by magnitude
+                self.magdist[trt] = zip(*value)
+            else:
+                self.dic[trt] = float(value)
+
+    def __call__(self, trt, mag):
+        maxdist = getdefault(self.dic, trt)
+        if isinstance(maxdist, float):  # scalar maximum distance
+            return maxdist
+        if not hasattr(self, 'interp'):
+            self.interp = {}  # function cache
+        try:
+            md = self.interp[trt]  # retrieve from the cache
+        except KeyError:  # fill the cache
+            magdist = getdefault(self.magdist, trt)
+            md = self.interp[trt] = interp1d(
+                *magdist, bounds_error=False, fill_value='extrapolate')
+        return md(mag)
+
+    def __getitem__(self, trt):
+        value = getdefault(self.dic, trt)
+        if isinstance(value, float):  # scalar maximum distance
+            return value
+        # get the maximum magnitude distance
+        return value[-1][1]
+
+    def __iter__(self):
+        return iter(self.dic)
+
+    def __len__(self):
+        return len(self.dic)
+
+    def __repr__(self):
+        return repr(self.dic)
 
 
 # ########################### SOURCES/RUPTURES ############################# #
@@ -853,15 +975,33 @@ def positiveints(value):
     return ints
 
 
+def simple_slice(value):
+    """
+    >>> simple_slice('2:5')
+    (2, 5)
+    >>> simple_slice('0:None')
+    (0, None)
+    """
+    try:
+        start, stop = value.split(':')
+        start = ast.literal_eval(start)
+        stop = ast.literal_eval(stop)
+        if start is not None and stop is not None:
+            assert start < stop
+    except:
+        raise ValueError('invalid slice: %s' % value)
+    return (start, stop)
+
 # ############################## site model ################################ #
 
 vs30_type = ChoiceCI('measured', 'inferred')
 
 SiteParam = collections.namedtuple(
-    'SiteParam', 'z1pt0 z2pt5 measured vs30 lon lat backarc'.split())
+    'SiteParam', 'z1pt0 z2pt5 measured vs30 lon lat depth backarc'.split())
 
 
-def site_param(z1pt0, z2pt5, vs30Type, vs30, lon, lat, backarc="false"):
+def site_param(z1pt0, z2pt5, vs30Type, vs30, lon, lat,
+               depth=0, backarc="false"):
     """
     Used to convert a node like
 
@@ -873,7 +1013,7 @@ def site_param(z1pt0, z2pt5, vs30Type, vs30, lon, lat, backarc="false"):
     return SiteParam(positivefloat(z1pt0), positivefloat(z2pt5),
                      vs30_type(vs30Type) == 'measured',
                      positivefloat(vs30), longitude(lon),
-                     latitude(lat), boolean(backarc))
+                     latitude(lat), float_(depth), boolean(backarc))
 
 # used for the exposure validation
 cost_type = Choice('structural', 'nonstructural', 'contents',

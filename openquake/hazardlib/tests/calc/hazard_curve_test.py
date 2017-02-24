@@ -14,10 +14,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
+import pickle
 import numpy
 
 import openquake.hazardlib
-from openquake.hazardlib import const
+from openquake.hazardlib import const, valid
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
@@ -33,6 +34,13 @@ from openquake.hazardlib.source.point import PointSource
 
 
 class HazardCurvesFiltersTestCase(unittest.TestCase):
+    def test_MagnitudeDistance_pickleable(self):
+        md = valid.IntegrationDistance(
+            dict(default=[(1, 10), (2, 20), (3, 30), (4, 40), (5, 100),
+                          (6, 200), (7, 400), (8, 800)]))
+        md2 = pickle.loads(pickle.dumps(md))
+        self.assertEqual(md.dic, md2.dic)
+
     def test_point_sources(self):
         sources = [
             openquake.hazardlib.source.PointSource(
@@ -80,8 +88,10 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         ]
         sites = [openquake.hazardlib.site.Site(Point(11, 10), 1, True, 2, 3),
                  openquake.hazardlib.site.Site(Point(10, 16), 2, True, 2, 3),
-                 openquake.hazardlib.site.Site(Point(10, 10.6), 3, True, 2, 3),
-                 openquake.hazardlib.site.Site(Point(10, 10.7), 4, True, 2, 3)]
+                 openquake.hazardlib.site.Site(
+                     Point(10, 10.6, 1), 3, True, 2, 3),
+                 openquake.hazardlib.site.Site(
+                     Point(10, 10.7, -1), 4, True, 2, 3)]
         sitecol = openquake.hazardlib.site.SiteCollection(sites)
 
         from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
@@ -125,6 +135,11 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         self.assertEqual(result.shape, (4, 3))  # 4 sites, 3 levels
         numpy.testing.assert_allclose(result[0], 0)  # no contrib to site 1
         numpy.testing.assert_allclose(result[1], 0)  # no contrib to site 2
+
+        # test that depths are kept after filtering (sites 3 and 4 remain)
+        s_filter = SourceFilter(sitecol, {'default': 100})
+        numpy.testing.assert_array_equal(
+            s_filter.get_close_sites(sources[0]).depths, ([1, -1]))
 
 
 # this example originally came from the Hazard Modeler Toolkit

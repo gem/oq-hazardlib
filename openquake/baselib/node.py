@@ -240,7 +240,9 @@ class StreamingXMLWriter(object):
         :param bytestream: the stream or file where to write the XML
         :param int indent: the indentation to use in the XML (default 4 spaces)
         """
-        assert not isinstance(bytestream, io.StringIO)  # common error
+        # guard against a common error, one must use io.BytesIO
+        if isinstance(bytestream, (io.StringIO, io.TextIOWrapper)):
+            raise TypeError('%r is not a byte stream' % bytestream)
         self.stream = bytestream
         self.indent = indent
         self.encoding = encoding
@@ -780,7 +782,9 @@ class ValidatingXmlParser(object):
         try:
             yield
         except ExpatError as err:
-            e = ExpatError(ErrorString(err.code))
+            msg = '%s: %s: %s' % (self.filename, err.lineno,
+                                  ErrorString(err.code))
+            e = ExpatError(msg)
             e.lineno = err.lineno
             e.offset = err.offset
             e.filename = self.filename
@@ -819,10 +823,16 @@ class ValidatingXmlParser(object):
                     self.p.ParseFile(f)
         return self._root
 
-    def _start_element(self, name, attrs):
+    def _start_element(self, longname, attrs):
+        try:
+            xmlns, name = longname.split('}')
+        except ValueError:  # no namespace in the longname
+            name = tag = longname
+        else:  # fix the tag with an opening brace
+            tag = '{' + longname
         self._ancestors.append(
-            Node('{' + name, attrs, lineno=self.p.CurrentLineNumber))
-        if self.stop and name.split('}')[1] == self.stop:
+            Node(tag, attrs, lineno=self.p.CurrentLineNumber))
+        if self.stop and name == self.stop:
             for anc in reversed(self._ancestors):
                 self._end_element(anc.tag)
             raise self.Exit

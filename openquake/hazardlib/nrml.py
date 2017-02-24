@@ -72,6 +72,7 @@ this is a job for the Node class which can be subclassed and
 supplemented by a dictionary of validators.
 """
 from __future__ import print_function
+import io
 import re
 import sys
 import copy
@@ -161,9 +162,9 @@ validators = {
     'magnitude': valid.positivefloat,
     'lon': valid.longitude,
     'lat': valid.latitude,
-    'depth': valid.positivefloat,
-    'upperSeismoDepth': valid.positivefloat,
-    'lowerSeismoDepth': valid.positivefloat,
+    'depth': valid.float_,
+    'upperSeismoDepth': valid.float_,
+    'lowerSeismoDepth': valid.float_,
     'posList': valid.posList,
     'pos': valid.lon_lat,
     'aValue': float,
@@ -229,7 +230,7 @@ validators = {
     'pos': valid.lon_lat,
     'gmv': valid.positivefloat,
     'spacing': valid.positivefloat,
-    'srcs_weights': valid.weights,
+    'srcs_weights': valid.positivefloats,
 }
 
 
@@ -259,10 +260,16 @@ class SourceModelParser(object):
         # NB: deepcopy is *essential* here
         groups = [copy.deepcopy(g) for g in groups]
         for group in groups:
+            nrup = 0
             for src in group:
                 if apply_uncertainties:
                     apply_uncertainties(src)
                     src.num_ruptures = src.count_ruptures()
+                    nrup += src.num_ruptures
+            # NB: if the user sets a wrong discretization parameter
+            # the call to `.count_ruptures()` can be ultra-slow
+            logging.debug("%s, %s: parsed %d source(s) with %d ruptures",
+                          fname, group.trt, len(group), nrup)
         self.fname_hits[fname] += 1
         return groups
 
@@ -287,7 +294,9 @@ def read(source, chatty=True, stop=None):
     """
     vparser = ValidatingXmlParser(validators, stop)
     nrml = vparser.parse_file(source)
-    assert striptag(nrml.tag) == 'nrml', nrml.tag
+    if striptag(nrml.tag) != 'nrml':
+        raise ValueError('%s: expected a node of kind nrml, got %s' %
+                         (source, nrml.tag))
     # extract the XML namespace URL ('http://openquake.org/xmlns/nrml/0.5')
     xmlns = nrml.tag.split('}')[0][1:]
     if xmlns != NRML05 and chatty:
@@ -320,6 +329,15 @@ def write(nodes, output=sys.stdout, fmt='%.7E', gml=True, xmlns=None):
     if hasattr(output, 'mode') and '+' in output.mode:  # read-write mode
         output.seek(0)
         read(output)  # validate the written file
+
+
+def convert(node):
+    """
+    Convert a node into a string in NRML format
+    """
+    with io.BytesIO() as f:
+        write([node], f)
+        return f.getvalue().decode('utf-8')
 
 
 if __name__ == '__main__':

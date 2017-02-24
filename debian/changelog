@@ -3,6 +3,51 @@
   * Implements Worden et al., (2012) GMICE
 
   [Michele Simionato]
+  * Added a `parallel.Computer` base class
+  * Changed the default distance from filtering from Rjb to Rrup
+  * Saved data transfer information automatically in `parallel.Starmap`
+
+python-oq-hazardlib (0.23.0-0~precise01) precise; urgency=low
+
+  [Graeme Weatherill]
+  * Implemented modification of selected GMPEs for use in Armenia
+
+  [Michele Simionato]
+  * Monitored the calculation time for the PoEs for each GSIM
+  * Introduced a magnitude-dependent integration distance
+
+  [Robin Gee, Michele Simionato]
+  * Implemented support for sites above the level of the sea
+
+  [Michele Simionato]
+  * Made the parallelization library more robust against unexpected exceptions
+  * Used always the same algorithm for computing quantiles (before there
+    was a special case in absence of weights)
+  * Extended `calc_hazard_curves` to manage mutex sources and ruptures and
+    removed `calc_hazard_curves_ext`
+
+  [Graeme Weatherill]
+  * Added new version of Pezeshk et al. (2011) GMPE adjusted for NEHRP BC Site
+    condition
+
+  [Michele Simionato]
+  * Parallelized `calc_hazard_curves_ext` and added an example of use
+    in the docstring of `openquake.hazardlib.calc.hazard_curves`
+  * Added NRML support for GriddedSurface and GriddedRupture objects
+  * Removed the warning about missing rtree
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 23 Feb 2017 10:59:37 +0100
+
+python-oq-hazardlib (0.22.0-0~precise01) precise; urgency=low
+
+  [Marco Pagani, Meya Yanger Walling]
+  * Implements the Megawati et al. (2003) GMPE for Singapore
+  * Fixed the sourcewriter in the case of NRML 0.5 sources with weights
+
+  [Michele Simionato]
+  * Improved the error message for XML files which are not NRML
+  * Added a test making sure that every GSIM is listed in the API documentation
+  * Added a `logscale(x_min, x_max, n)` function in valid.py
   * Updated the documentation of the API
   * Moved the NRML-related functionality from the engine into hazardlib
     in order to have an engine-independent Hazard Modeler Toolkit
@@ -50,6 +95,8 @@
   * Removed the rupture_site_filter from the calculators
   * Removed the speedups and optimized the distance calculations at the
     numpy level
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 23 Jan 2017 11:27:14 +0100
 
 python-oq-hazardlib (0.21.0-0~precise01) precise; urgency=low
 
@@ -216,7 +263,7 @@ python-oq-hazardlib (0.16.0-0~precise01) precise; urgency=low
   * Adds Montalva et al. (2015) GMPE
 
   [Robin Gee]
-  * Adds Tusa and Langer (2015) GMPE
+  * Adds Tusa and Langer (2016) GMPE
 
  -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 17 Nov 2015 10:31:52 +0100
 

@@ -20,6 +20,7 @@ import math
 import copy
 import operator
 import collections
+import numpy
 
 from openquake.baselib.node import context, striptag
 from openquake.hazardlib import geo, mfd, pmf, source
@@ -27,36 +28,6 @@ from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib import valid
 
 MAXWEIGHT = 200  # tuned by M. Simionato
-
-
-class SourceModel(object):
-    """
-    A container of SourceGroup instances with some additional attributes
-    describing the source model in the logic tree.
-    """
-    def __init__(self, name, weight, path, src_groups, num_gsim_paths, ordinal,
-                 samples):
-        self.name = name
-        self.weight = weight
-        self.path = path
-        self.src_groups = src_groups
-        self.num_gsim_paths = num_gsim_paths
-        self.ordinal = ordinal
-        self.samples = samples
-
-    @property
-    def num_sources(self):
-        return sum(len(sg) for sg in self.src_groups)
-
-    def get_skeleton(self):
-        """
-        Return an empty copy of the source model, i.e. without sources,
-        but with the proper attributes for each SourceGroup contained within.
-        """
-        src_groups = [SourceGroup(sg.trt, [], sg.min_mag, sg.max_mag, sg.id)
-                      for sg in self.src_groups]
-        return self.__class__(self.name, self.weight, self.path, src_groups,
-                              self.num_gsim_paths, self.ordinal, self.samples)
 
 
 class SourceGroup(collections.Sequence):
@@ -67,6 +38,17 @@ class SourceGroup(collections.Sequence):
         the tectonic region type all the sources belong to
     :param list sources:
         a list of hazardlib source objects
+    :param name:
+        The name of the group
+    :param src_interdep:
+        A string specifying if the sources in this cluster are independent or
+        mutually exclusive
+    :param rup_indep:
+        A string specifying if the ruptures within each source of the cluster
+        are independent or mutually exclusive
+    :param weights:
+        A dictionary whose keys are the source IDs of the cluster and the
+        values are the weights associated with each source
     :param min_mag:
         the minimum magnitude among the given sources
     :param max_mag:
@@ -99,10 +81,28 @@ class SourceGroup(collections.Sequence):
         # return SourceGroups, ordered by TRT string
         return sorted(source_stats_dict.values())
 
-    def __init__(self, trt, sources=None,
+    @property
+    def srcs_weights(self):
+        """
+        The weights of the underlying sources. If not specified, returns
+        an array of 1s.
+        """
+        if self._srcs_weights is None:
+            return list(numpy.ones(len(self.sources)))
+        return self._srcs_weights
+
+    def __init__(self, trt, sources=None, name=None, src_interdep='indep',
+                 rup_interdep='indep', srcs_weights=None,
                  min_mag=None, max_mag=None, id=0, eff_ruptures=-1):
+        # checks
         self.trt = trt
-        self.sources = self.src_list = []
+        self._check_init_variables(sources, name, src_interdep, rup_interdep,
+                                   srcs_weights)
+        self.sources = []
+        self.name = name
+        self.src_interdep = src_interdep
+        self.rup_interdep = rup_interdep
+        self._srcs_weights = srcs_weights
         self.min_mag = min_mag
         self.max_mag = max_mag
         self.id = id
@@ -111,6 +111,22 @@ class SourceGroup(collections.Sequence):
                 self.update(src)
         self.source_model = None  # to be set later, in CompositionInfo
         self.eff_ruptures = eff_ruptures  # set later nby get_rlzs_assoc
+
+    def _check_init_variables(self, src_list, name, src_interdep, rup_interdep,
+                              srcs_weights):
+        if src_interdep not in ('indep', 'mutex'):
+            raise ValueError('source interdependence incorrect %s ' %
+                             src_interdep)
+        if rup_interdep not in ('indep', 'mutex'):
+            raise ValueError('rupture interdependence incorrect %s ' %
+                             rup_interdep)
+        # check TRT
+        if src_list:  # can be None
+            for src in src_list:
+                assert src.tectonic_region_type == self.trt, (
+                    src.tectonic_region_type, self.trt)
+
+        # ask Marco: should we add a check on the srcs_weights?
 
     def tot_ruptures(self):
         return sum(src.num_ruptures for src in self.sources)
@@ -296,6 +312,25 @@ def split_source(src):
         yield src
 
 
+def split_filter_source(src, src_filter):
+    """
+    :param src: a source to split
+    :param src_filter: a SourceFilter instance
+    :returns: a list of split sources
+    """
+    has_serial = hasattr(src, 'serial')
+    split_sources = []
+    start = 0
+    for split in split_source(src):
+        if has_serial:
+            nr = split.num_ruptures
+            split.serial = src.serial[start:start + nr]
+            start += nr
+        if src_filter.get_close_sites(split) is not None:
+            split_sources.append(split)
+    return split_sources
+
+
 def split_coords_2d(seq):
     """
     :param seq: a flat list with lons and lats
@@ -430,6 +465,11 @@ class RuptureConverter(object):
             surface = geo.ComplexFaultSurface.from_fault_data(
                 self.geo_lines(surface_node),
                 self.complex_fault_mesh_spacing)
+        elif surface_node.tag.endswith('griddedSurface'):
+            with context(self.fname, surface_node):
+                coords = split_coords_3d(~surface_node.posList)
+            points = [geo.Point(*p) for p in coords]
+            surface = geo.GriddedSurface.from_points_list(points)
         else:  # a collection of planar surfaces
             planar_surfaces = list(map(self.geo_planar, surface_nodes))
             surface = geo.MultiSurface(planar_surfaces)
@@ -501,6 +541,25 @@ class RuptureConverter(object):
         """
         with context(self.fname, node):
             surfaces = list(node.getnodes('planarSurface'))
+        rupt = source.rupture.Rupture(
+            mag=mag, rake=rake,
+            tectonic_region_type=None,
+            hypocenter=hypocenter,
+            surface=self.convert_surfaces(surfaces),
+            source_typology=source.NonParametricSeismicSource)
+        return rupt
+
+    def convert_griddedRupture(self, node, mag, rake, hypocenter):
+        """
+        Convert a griddedRupture node.
+
+        :param node: the rupture node
+        :param mag: the rupture magnitude
+        :param rake: the rupture rake angle
+        :param hypocenter: the rupture hypocenter
+        """
+        with context(self.fname, node):
+            surfaces = [node.griddedSurface]
         rupt = source.rupture.Rupture(
             mag=mag, rake=rake,
             tectonic_region_type=None,
@@ -782,8 +841,7 @@ class SourceConverter(RuptureConverter):
         :param node:
             a node with tag sourceGroup
         :returns:
-            a :class:`openquake.commonlib.source.SourceGroup` instance
-            mimicking a :class:`openquake.hazardlib.source.base.SourceGroup`
+            a :class:`SourceGroup` instance
         """
         trt = node['tectonicRegion']
         srcs_weights = node.attrib.get('srcs_weights')
@@ -808,7 +866,7 @@ class SourceConverter(RuptureConverter):
         sg.name = node.attrib.get('name')
         sg.src_interdep = node.attrib.get('src_interdep')
         sg.rup_interdep = node.attrib.get('rup_interdep')
-        sg.srcs_weights = srcs_weights
+        sg._srcs_weights = srcs_weights
         return sg
 
 
