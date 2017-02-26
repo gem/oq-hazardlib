@@ -63,6 +63,7 @@ import logging
 import collections
 from contextlib import contextmanager
 import numpy
+import h5py
 from scipy.interpolate import interp1d
 try:
     import rtree
@@ -71,6 +72,8 @@ except ImportError:
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.site import FilteredSiteCollection
 from openquake.hazardlib.geo.utils import fix_lons_idl
+
+F32 = numpy.uint32
 
 
 @contextmanager
@@ -274,7 +277,7 @@ class SourceFilter(object):
             else integration_distance)
         self.sitecol = sitecol
         self.use_rtree = use_rtree and rtree and (
-            integration_distance and sitecol is not None and
+            self.integration_distance and sitecol is not None and
             sitecol.at_sea_level())
         if self.use_rtree:
             fixed_lons, self.idl = fix_lons_idl(sitecol.lons)
@@ -283,6 +286,8 @@ class SourceFilter(object):
                 self.index.insert(sid, (lon, lat, lon, lat))
         if rtree is None:
             logging.info('Using distance filtering [no rtree]')
+        self.sids = {}  # array sids -> idx
+        self.idx = -1
 
     def get_affected_box(self, src):
         """
@@ -322,6 +327,20 @@ class SourceFilter(object):
         if source_sites:
             return source_sites[0][1]
 
+    def save_sids(self, ext5path):
+        """
+        Save the .sids as a variable-length array of 32 bit integers
+        """
+        nbytes = 0
+        with h5py.File(ext5path) as f:
+            dset = f.create_dataset(
+                'sids', (len(self.sids),), h5py.special_dtype(vlen=F32))
+            for sids, idx in self.sids.items():
+                dset[idx] = numpy.array(sids, F32)
+                nbytes += 4 * len(sids)
+            dset.attrs['nbytes'] = nbytes
+        self.sids.clear()
+
     def __call__(self, sources, sites=None):
         if sites is None:
             sites = self.sitecol
@@ -332,14 +351,16 @@ class SourceFilter(object):
         for src in sources:
             if self.use_rtree:  # Rtree filtering, used in the controller
                 box = self.get_affected_box(src)
-                sids = numpy.array(sorted(self.index.intersection(box)))
+                sids = tuple(sorted(self.index.intersection(box)))
                 if len(set(sids)) < len(sids):
                     # sanity check against rtree bugs
                     raise ValueError('sids=%s' % sids)
                 if len(sids):
                     src.nsites = len(sids)
-                    yield src, FilteredSiteCollection(sids, sites.complete)
+                    yield src, FilteredSiteCollection(
+                        numpy.array(sids), sites.complete)
             elif not self.integration_distance:
+                sids = tuple(sites.sids)
                 yield src, sites
             else:  # normal filtering, used in the workers
                 maxdist = self.integration_distance(src.tectonic_region_type)
@@ -347,8 +368,12 @@ class SourceFilter(object):
                     s_sites = src.filter_sites_by_distance_to_source(
                         maxdist, sites)
                 if s_sites is not None:
+                    sids = tuple(s_sites.sids)
                     src.nsites = len(s_sites)
                     yield src, s_sites
+            if hasattr(self, 'idx') and sids not in self.sids:
+                self.idx += 1
+                self.sids[sids] = src.idx = self.idx
 
     def __getstate__(self):
         return dict(integration_distance=self.integration_distance,
