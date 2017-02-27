@@ -1,6 +1,14 @@
+  [Michele Simionato]
+  * Enabled rtree filtering only if the site collection is at sea level
+  * Added a `parallel.Computer` base class
+  * Changed the default distance from filtering from Rjb to Rrup
+  * Saved data transfer information automatically in `parallel.Starmap`
+
+python-oq-hazardlib (0.23.0-0~precise01) precise; urgency=low
+
   [Graeme Weatherill]
   * Implemented modification of selected GMPEs for use in Armenia
-  
+
   [Michele Simionato]
   * Monitored the calculation time for the PoEs for each GSIM
   * Introduced a magnitude-dependent integration distance
@@ -24,6 +32,8 @@
     in the docstring of `openquake.hazardlib.calc.hazard_curves`
   * Added NRML support for GriddedSurface and GriddedRupture objects
   * Removed the warning about missing rtree
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 23 Feb 2017 10:59:37 +0100
 
 python-oq-hazardlib (0.22.0-0~precise01) precise; urgency=low
 

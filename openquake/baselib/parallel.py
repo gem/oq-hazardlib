@@ -137,6 +137,7 @@ fast sources.
 from __future__ import print_function
 import os
 import sys
+import abc
 import time
 import signal
 import socket
@@ -155,6 +156,7 @@ from openquake.baselib.general import (
     block_splitter, split_in_blocks, AccumDict, humansize)
 
 executor = ProcessPoolExecutor()
+executor.pids = ()  # set by wakeup_pool
 # the num_tasks_hint is chosen to be 5 times bigger than the name of
 # cores; it is a heuristic number to get a good distribution;
 # it has no more significance than that
@@ -398,9 +400,14 @@ class IterResult(object):
             self.save_task_data(mon)
             yield val
         if self.received:
+            tot = sum(self.received)
+            max_per_task = max(self.received)
             self.progress('Received %s of data, maximum per task %s',
-                          humansize(sum(self.received)),
-                          humansize(max(self.received)))
+                          humansize(tot), humansize(max_per_task))
+            received = {'max_per_task': max_per_task, 'tot': tot}
+            tname = self.name
+            dic = {tname: {'sent': self.sent, 'received': received}}
+            mon.save_info(dic)
 
     def save_task_data(self, mon):
         if mon.hdf5path and hasattr(mon, 'weight'):
@@ -435,6 +442,49 @@ class IterResult(object):
             else:
                 res.name = iresult.name.split('#')[0]
         return res
+
+
+class Computer(object):
+    """
+    Abstract Base Class. Subclasses must override the methods `__call__`
+    and `gen_args`, and may override `aggregate`. They may also override
+    `__init__`: in that case they must set the `hdf5path` and `__name__`
+    attributes.
+    """
+    def __init__(self, hdf5path=None):
+        self.hdf5path = hdf5path
+        self.__name__ = self.__class__.__name__
+
+    @abc.abstractmethod
+    def __call__(self, *args):
+        """Return a result, typically a dictionary"""
+        return {}
+
+    @abc.abstractmethod
+    def gen_args(self, *args):
+        """Yield tuples of arguments"""
+        yield ()
+
+    def aggregate(self, acc, val):
+        """Aggregate values; the default operation is the sum"""
+        return acc + val
+
+    def monitor(self, operation=None, autoflush=False, measuremem=False):
+        """
+        Return a :class:`openquake.baselib.performance.Monitor` instance
+        """
+        return Monitor(operation or self.__name__, self.hdf5path, autoflush,
+                       measuremem)
+
+    def run(self, *args, **kw):
+        """
+        Run the computer with the given arguments; one specify extra arguments
+        `acc` and `Starmap`.
+        """
+        acc = kw.get('acc')
+        starmap = kw.get('Starmap', Starmap)
+        wakeup_pool()  # if not already started
+        return starmap(self, self.gen_args(*args)).reduce(self.aggregate, acc)
 
 
 class Starmap(object):
@@ -494,8 +544,13 @@ class Starmap(object):
         self.results = []
         self.sent = AccumDict()
         self.distribute = oq_distribute(oqtask)
-        f = oqtask.__init__ if inspect.isclass(oqtask) else oqtask
-        self.argnames = inspect.getargspec(f).args
+        # a task can be a function, a class or an instance with a __call__
+        if inspect.isfunction(oqtask):
+            self.argnames = inspect.getargspec(oqtask).args
+        elif inspect.isclass(oqtask):
+            self.argnames = inspect.getargspec(oqtask.__init__).args[1:]
+        else:  # instance with a __call__ method
+            self.argnames = inspect.getargspec(oqtask.__call__).args[1:]
         if self.distribute == 'ipython' and isinstance(
                 self.executor, ProcessPoolExecutor):
             client = ipp.Client()
@@ -677,13 +732,13 @@ def _wakeup(sec):
 def wakeup_pool():
     """
     This is used at startup, only when the ProcessPoolExecutor is used,
-    to fork the processes before loading any big data structure.
-
-    :returns: the list of PIDs spawned or None
+    to fork the processes before loading any big data structure. It is
+    called once once, and adds the list of PIDs spawned to the executor.
     """
-    if oq_distribute() == 'futures':  # when using the ProcessPoolExecutor
+    if not executor.pids and oq_distribute() == 'futures':
+        # when using the ProcessPoolExecutor
         pids = Starmap(_wakeup, ((.2,) for _ in range(executor._max_workers)))
-        return list(pids)
+        executor.pids = list(pids)
 
 
 class BaseStarmap(object):
