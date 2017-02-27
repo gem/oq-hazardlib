@@ -68,7 +68,7 @@ class Mesh(object):
     #: approximation is required -- set to 5 meters.
     DIST_TOLERANCE = 0.005
 
-    def __init__(self, lons, lats, depths=None, from_site_model=False):
+    def __init__(self, lons, lats, depths=None):
         assert (isinstance(lons, numpy.ndarray) and
                 isinstance(lats, numpy.ndarray) and
                 (depths is None or isinstance(depths, numpy.ndarray))
@@ -80,10 +80,9 @@ class Mesh(object):
         self.lons = lons
         self.lats = lats
         self.depths = depths
-        self.from_site_model = from_site_model
 
     @classmethod
-    def from_coords(cls, coords, from_site_model=False):
+    def from_coords(cls, coords):
         """
         Create a mesh object from a list of 3D coordinates (by sorting them)
 
@@ -91,8 +90,7 @@ class Mesh(object):
         :returns: a :class:`Mesh` instance
         """
         lons, lats, depths = zip(*sorted(coords))
-        return cls(numpy.array(lons), numpy.array(lats), numpy.array(depths),
-                   from_site_model)
+        return cls(numpy.array(lons), numpy.array(lats), numpy.array(depths))
 
     @classmethod
     def from_points_list(cls, points):
