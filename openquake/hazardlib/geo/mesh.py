@@ -82,7 +82,7 @@ class Mesh(object):
         self.depths = depths
 
     @classmethod
-    def from_coords(cls, coords):
+    def from_coords(cls, coords, from_site_model=False):
         """
         Create a mesh object from a list of 3D coordinates (by sorting them)
 
@@ -90,7 +90,9 @@ class Mesh(object):
         :returns: a :class:`Mesh` instance
         """
         lons, lats, depths = zip(*sorted(coords))
-        return cls(numpy.array(lons), numpy.array(lats), numpy.array(depths))
+        self = cls(numpy.array(lons), numpy.array(lats), numpy.array(depths))
+        self.from_site_model = from_site_model
+        return self
 
     @classmethod
     def from_points_list(cls, points):
