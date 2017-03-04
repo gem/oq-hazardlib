@@ -9,9 +9,10 @@ addons:
   apt:
     packages:
     - parallel
+    - libspatialindex-dev #FIXME
 
 install:
-  - pip install -r requirements-py35-linux64.txt
+  - pip install -r requirements-py36-linux64.txt
   - pip install -e .
 
 script:

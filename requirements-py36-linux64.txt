@@ -1,0 +1,31 @@
+# Suggested versions for development based on
+# Ubuntu 16.04 stack
+# !! must update pip first! so wheels will be used !!
+
+# GEM Mirror
+# We also provide pre-compiled manylinux1 wheels for
+# h5py, Shapely and psutil
+
+http://ftp.openquake.org/wheelhouse/linux/py/setuptools-28.8.0-py2.py3-none-any.whl
+http://ftp.openquake.org/wheelhouse/linux/py36/pkgconfig-1.1.0-py3-none-any.whl
+http://ftp.openquake.org/wheelhouse/linux/py/mock-1.3.0-py2.py3-none-any.whl
+http://ftp.openquake.org/wheelhouse/linux/py36/h5py-2.6.0-cp36-cp36m-manylinux1_x86_64.whl
+http://ftp.openquake.org/wheelhouse/linux/py36/nose-1.3.7-py3-none-any.whl
+http://ftp.openquake.org/wheelhouse/linux/py36/numpy-1.11.1-cp36-cp36m-manylinux1_x86_64.whl
+http://ftp.openquake.org/wheelhouse/linux/py36/scipy-0.17.1-cp36-cp36m-manylinux1_x86_64.whl
+http://ftp.openquake.org/wheelhouse/linux/py36/psutil-3.4.2-cp36-cp36m-manylinux1_x86_64.whl
+http://ftp.openquake.org/wheelhouse/linux/py36/Shapely-1.5.13-cp36-cp36m-manylinux1_x86_64.whl
+http://ftp.openquake.org/wheelhouse/linux/py36/docutils-0.12-py3-none-any.whl
+http://ftp.openquake.org/wheelhouse/linux/py/decorator-4.0.11-py2.py3-none-any.whl
+http://ftp.openquake.org/wheelhouse/linux/py/funcsigs-1.0.2-py2.py3-none-any.whl
+http://ftp.openquake.org/wheelhouse/linux/py/pbr-1.8.0-py2.py3-none-any.whl
+http://ftp.openquake.org/wheelhouse/linux/py/six-1.10.0-py2.py3-none-any.whl
+
+## Extra ##
+
+### Rtree ###
+# comment the following lines to skip installation
+# of Rtree (experimental wheel, optional feature)
+# FIXME missing wheel
+#http://ftp.openquake.org/wheelhouse/linux/py36/Rtree-0.8.2-cp36-cp36m-manylinux1_x86_64.whl
+rtree==0.8.2
