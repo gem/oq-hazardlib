@@ -821,16 +821,24 @@ class Processmap(BaseStarmap):
 # ######################## support for grid engine ######################## #
 
 
+def _qsub(thisfile, hostport, ntimes, fake=False):
+    if fake:
+        for _ in range(ntimes):
+            subprocess.call([sys.executable, thisfile, '%s:%d' % hostport])
+    else:
+        subprocess.call(
+            ['qsub', '-b', 'y', '-t', '1-%d' % ntimes,
+             sys.executable, thisfile, '%s:%d' % hostport])
+
+
 def qsub(func, allargs, authkey=None):
     """
     """
     thisfile = os.path.abspath(__file__)
     host = socket.gethostbyname(socket.gethostname())
     listener = Listener((host, 0), backlog=5, authkey=authkey)
-    port = listener._listener._socket.getsockname()[1]
-    subprocess.run(
-        ['qsub', '-b', 'y', '-t', '1-%d' % len(allargs),
-         sys.executable, thisfile, ':%d' % port])
+    hostport = listener._listener._socket.getsockname()
+    _qsub(thisfile, hostport, len(allargs))
     conndict = {}
     for i, args in enumerate(allargs, 1):
         monitor = args[-1]
