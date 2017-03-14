@@ -659,6 +659,16 @@ class Starmap(object):
             self.progress('Executing "%s" in process', self.name)
             fut = mkfuture(safely_call(self.task_func, args))
             return IterResult([fut], self.name)
+
+        if self.distribute == 'qsub':
+            allargs = list(self.task_args)
+            return IterResult(qsub(self.task_func, allargs, fake=False),
+                              self.name, len(allargs), self.progress)
+        if self.distribute == 'fakeqsub':
+            allargs = list(self.task_args)
+            return IterResult(qsub(self.task_func, allargs, fake=True),
+                              self.name, len(allargs), self.progress)
+
         task_no = 0
         for args in self.task_args:
             task_no += 1
@@ -821,53 +831,58 @@ class Processmap(BaseStarmap):
 # ######################## support for grid engine ######################## #
 
 
-def _qsub(thisfile, hostport, ntimes, fake=False):
+def _qsub(thisfile, host, port, ntimes, fake):
     if fake:
-        for _ in range(ntimes):
-            subprocess.call([sys.executable, thisfile, '%s:%d' % hostport])
+        for i in range(ntimes):
+            subprocess.Popen([sys.executable, thisfile, host, port])
+            yield i
     else:
         subprocess.call(
             ['qsub', '-b', 'y', '-t', '1-%d' % ntimes,
-             sys.executable, thisfile, '%s:%d' % hostport])
+             sys.executable, thisfile, host, port])
+        return range(1, ntimes + 1)
 
 
-def qsub(func, allargs, authkey=None):
+def qsub(func, allargs, authkey=None, fake=False):
     """
+    Map functions to arguments by means of the Grid Engine.
+
+    :param func: a pickleable callable object
+    :param allargs: a list of tuples of arguments
+    :param authkey: authentication token used to send back the results
+    :returns: an iterable over results of the form (res, etype, mon)
     """
     thisfile = os.path.abspath(__file__)
     host = socket.gethostbyname(socket.gethostname())
     listener = Listener((host, 0), backlog=5, authkey=authkey)
-    hostport = listener._listener._socket.getsockname()
-    _qsub(thisfile, hostport, len(allargs))
-    conndict = {}
-    for i, args in enumerate(allargs, 1):
-        monitor = args[-1]
-        monitor.task_no = i
-        conn = _getconn(listener)
-        conn.send((func, args))
-        for data, task_no in _getdata(conndict):
-            yield data
-            del conndict[task_no]
-        conndict[i] = conn
-    for task_no in sorted(conndict):
-        conn = conndict[task_no]
-        try:
-            data = conn.recv()
-        finally:
-            conn.close()
-        yield data
-    listener.close()
-
-
-def _getdata(conndict):
-    for task_no in sorted(conndict):
-        conn = conndict[task_no]
-        if conn.poll():
+    try:
+        host, port = listener._listener._socket.getsockname()
+        idxs = _qsub(thisfile, host, str(port), len(allargs), fake)
+        conndict = {}
+        for i, args in zip(idxs, allargs):
+            monitor = args[-1]
+            monitor.task_no = i
+            monitor.weight = getattr(args[0], 'weight', 1.)
+            conn = _getconn(listener)  # get the first connected task
+            conn.send((func, args))  # send its arguments
+            conndict[i] = conn
+            j = i - executor._max_workers  # previous task_no
+            if j > 0:
+                try:
+                    yield conndict[j].recv()
+                finally:
+                    conndict[j].close()
+                    del conndict[j]
+        # yield the rest of the data
+        for task_no in sorted(conndict):
+            conn = conndict[task_no]
             try:
                 data = conn.recv()
             finally:
                 conn.close()
-            yield data, task_no
+            yield data
+    finally:
+        listener.close()
 
 
 def _getconn(listener):
@@ -882,11 +897,10 @@ def _getconn(listener):
         return conn
 
 
-def main(hostport):
-    host, port = hostport.split(':')
+def _runner(host, port):
     conn = Client((host, int(port)))
     func, args = conn.recv()
     safely_call(func, args, False, conn)
 
 if __name__ == '__main__':
-    main(sys.argv[1])
+    _runner(*sys.argv[1:])
