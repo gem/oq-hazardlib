@@ -840,7 +840,8 @@ def _qsub(thisfile, host, port, ntimes, fake):
         subprocess.call(
             ['qsub', '-b', 'y', '-t', '1-%d' % ntimes,
              sys.executable, thisfile, host, port])
-        return range(1, ntimes + 1)
+        for i in range(1, ntimes + 1):
+            yield i
 
 
 def qsub(func, allargs, authkey=None, fake=False):
