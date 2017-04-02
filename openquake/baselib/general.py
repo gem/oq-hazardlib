@@ -26,6 +26,7 @@ import sys
 import imp
 import copy
 import math
+import zipfile
 import operator
 import warnings
 import tempfile
@@ -33,7 +34,6 @@ import importlib
 import itertools
 import subprocess
 import collections
-from zipfile import ZipFile, ZIP_DEFLATED, ZIP_STORED
 
 import numpy
 from decorator import decorator
@@ -827,9 +827,10 @@ def deprecated(message):
 
 
 class NpzWriter(object):
-    def __init__(self, npzpath, compress=True):
+    def __init__(self, npzpath, compress='DEFLATED'):
+        assert compress in ('STORED', 'DEFLATED', 'BZIP2', 'LZMA'), compress
         self.npzpath = npzpath
-        self.compress = ZIP_DEFLATED if compress else ZIP_STORED
+        self.compress = getattr(zipfile, 'ZIP_' + compress)
         open(npzpath, 'w').close()
 
     def write(self, key, array, npz=True):
@@ -852,7 +853,8 @@ class NpzWriter(object):
         """
         for key, path in sorted(npydict.items()):
             try:
-                z = ZipFile(self.npzpath, 'a', self.compress, allowZip64=True)
+                z = zipfile.ZipFile(
+                    self.npzpath, 'a', self.compress, allowZip64=True)
                 with z:
                     z.write(path, key + '.npy')
             finally:
