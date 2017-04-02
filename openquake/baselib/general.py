@@ -33,6 +33,7 @@ import importlib
 import itertools
 import subprocess
 import collections
+from zipfile import ZipFile, ZIP_DEFLATED, ZIP_STORED
 
 import numpy
 from decorator import decorator
@@ -823,3 +824,36 @@ def deprecated(message):
         func.called += 1
         return func(*args, **kw)
     return decorator(_deprecated)
+
+
+class NpzWriter(object):
+    def __init__(self, npzpath, compress=True):
+        self.npzpath = npzpath
+        self.compress = ZIP_DEFLATED if compress else ZIP_STORED
+        open(npzpath, 'w').close()
+
+    def write(self, key, array, npz=True):
+        """
+        Save the given array on the .npz archive under the given key, unless
+        npz is False. In that case, only save the array in .npy format and
+        return the path of the temporary .npy file.
+        """
+        fh, fpath = tempfile.mkstemp(suffix='.npy')
+        os.close(fh)
+        numpy.save(fpath, array)
+        if npz:
+            self.add_npydict({key: fpath})
+        else:
+            return fpath
+
+    def add_npydict(self, npydict):
+        """
+        Add a dictionary of the form key -> npy path to the npz archive.
+        """
+        for key, path in sorted(npydict.items()):
+            try:
+                z = ZipFile(self.npzpath, 'a', self.compress, allowZip64=True)
+                with z:
+                    z.write(path, key + '.npy')
+            finally:
+                os.remove(path)
