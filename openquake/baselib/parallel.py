@@ -170,8 +170,6 @@ if OQ_DISTRIBUTE == 'celery':
     from celery.result import ResultSet
     from celery import Celery
     from celery.task import task
-    #from openquake.engine.celeryconfig import broker_url, result_backend
-    #app = Celery('openquake', backend=result_backend, broker=broker_url)
     app = Celery()
     app.config_from_object('openquake.engine.celeryconfig')
 
