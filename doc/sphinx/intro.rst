@@ -33,7 +33,7 @@ support on IRC channel #openquake on freenode.
 Installation
 ------------
 
-See https://github.com/gem/oq-hazardlib/blob/master/README.md#installation
+See https://github.com/gem/oq-hazardlib/blob/engine-2.4/README.md#installation
 
 License
 -------
