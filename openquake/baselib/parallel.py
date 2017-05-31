@@ -573,7 +573,8 @@ class Starmap(object):
                 self.task_ids.pop(idx)
                 fut = mkfuture(result_dict['result'])
                 # work around a celery bug
-                del app.backend._cache[task_id]
+                # FIXME does not work with Celery 4
+                # del app.backend._cache[task_id]
                 yield fut
 
         else:  # future interface
