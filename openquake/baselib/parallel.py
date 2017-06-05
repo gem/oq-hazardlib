@@ -137,7 +137,7 @@ fast sources.
 from __future__ import print_function
 import os
 import sys
-import abc
+import mock
 import time
 import signal
 import socket
@@ -796,6 +796,57 @@ class Processmap(BaseStarmap):
     >>> sorted(c.items())
     [('d', 1), ('e', 1), ('h', 1), ('l', 3), ('o', 2), ('r', 1), ('w', 1)]
     """
+
+
+class Remotemap(BaseStarmap):
+    class poolfactory(object):
+        def __init__(self, poolsize):
+            self.poolsize = poolsize
+
+        def imap_unordered(self, func, iterargs):
+            for args in iterargs:
+                yield func, args
+
+    def submit_all(self, progress=logging.info):
+        """
+        :returns: an :class:`IterResult` instance
+        """
+        conn = MultiConn(self.ADDRESSES)
+        for func_args in enumerate(self.imap):
+            conn.send(func_args)
+        futs = (mkfuture(res) for res in conn.recv())
+        return IterResult(futs, self.func.__name__, self.num_tasks, progress)
+
+
+class MultiConn(object):
+    def __init__(self, addresses):
+        self.addresses = addresses
+        self.n = len(addresses)
+        self.i = 0
+        self.conndict = {}
+
+    def send(self, obj):
+        n = self.i % self.n
+        try:
+            conn = self.conndict[n]
+        except KeyError:
+            conn = self.conndict[n] = Client(self.addresses[n])
+        conn.send(obj)
+        self.i += 1
+
+    def recv(self):
+        n = 0
+        while True:
+            if n == self.i:
+                break
+            ready = multiprocessing.connection.wait(self.conndict.values())
+            for conn in ready:
+                yield conn.recv()
+                n += 1
+
+    def close(self):
+        for conn in self.conndict.values():
+            conn.close()
 
 # ######################## support for grid engine ######################## #
 
