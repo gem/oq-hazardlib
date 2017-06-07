@@ -1,3 +1,0 @@
-include README.md LICENSE CONTRIBUTORS.txt
-
-recursive-include openquake/*/tests *.* README
